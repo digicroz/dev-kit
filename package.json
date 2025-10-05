@@ -1,0 +1,104 @@
+{
+  "name": "@digicroz/dev-kit",
+  "version": "1.0.0",
+  "description": "A comprehensive CLI toolkit for modern development workflows - featuring task automation, project cleaning, and developer utilities",
+  "keywords": [
+    "cli",
+    "toolkit",
+    "development",
+    "workflow",
+    "automation",
+    "typescript",
+    "developer-tools",
+    "build-tools",
+    "task-runner",
+    "project-management",
+    "dev-kit",
+    "modern-dev",
+    "cli-tools"
+  ],
+  "bin": {
+    "dk": "./dist/cli.js"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "bin"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digicroz/dev-kit.git"
+  },
+  "homepage": "https://github.com/digicroz/dev-kit#readme",
+  "bugs": {
+    "url": "https://github.com/digicroz/dev-kit/issues"
+  },
+  "author": {
+    "name": "digicroz",
+    "url": "https://github.com/digicroz"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "npx rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "release:patch": "npm version patch",
+    "postversion": "git push && git push --tags && npm publish",
+    "deploy:dev": "dk deploy dev",
+    "deploy:prod": "dk deploy prod",
+    "link": "npm run build && npm link",
+    "unlink": "npm unlink -g run-project-commands"
+  },
+  "dependencies": {
+    "@types/inquirer": "^9.0.8",
+    "advanced-js-kit": "^1.0.0",
+    "boxen": "^8.0.1",
+    "chalk": "^5.3.0",
+    "cli-spinners": "^3.2.0",
+    "commander": "^11.0.0",
+    "fast-glob": "^3.3.3",
+    "figlet": "^1.7.0",
+    "gradient-string": "^3.0.0",
+    "inquirer": "^12.7.0",
+    "minimist": "^1.2.8",
+    "ora": "^8.2.0",
+    "mysql2": "^3.11.3",
+    "pg": "^8.12.0",
+    "sqlite3": "^5.1.7",
+    "mongodb": "^6.10.0"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^24.0.10",
+    "@types/pg": "^8.11.10",
+    "@types/sqlite3": "^3.1.11",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.4.0"
+  }
+}
