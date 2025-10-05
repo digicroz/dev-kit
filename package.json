@@ -71,7 +71,7 @@
     "deploy:dev": "dk deploy dev",
     "deploy:prod": "dk deploy prod",
     "link": "npm run build && npm link",
-    "unlink": "npm unlink -g run-project-commands"
+    "unlink": "npm unlink -g @digicroz/dev-kit"
   },
   "dependencies": {
     "@types/inquirer": "^9.0.8",
