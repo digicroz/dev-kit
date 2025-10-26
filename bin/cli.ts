@@ -25,7 +25,7 @@ import {
 import { init as runInit } from "../src/commands/init.js"
 import { updateConfig } from "../src/commands/config.js"
 import { startSpringBootServices } from "../src/commands/springBoot.js"
-import { assets } from "../src/commands/assets.js"
+import { gen } from "../src/commands/gen.js"
 import { gitFix } from "../src/commands/git.js"
 import {
   dbStatus,
@@ -515,25 +515,19 @@ async function main() {
       await cmd.execute(...args)
     })
 
-  // Assets commands
-  const assetsCommand = program
-    .command("assets")
-    .description(chalk.gray("🎨 Generate type-safe asset imports"))
-
-  assetsCommand
+  program
     .command("gen")
-    .alias("generate")
-    .description(chalk.gray("🖼️ Generate image index file"))
+    .alias("g")
+    .description(chalk.gray("⚡ Run all configured generators"))
     .action(async (...args) => {
       const cmd = createEnhancedCommand(
-        "Assets generation",
-        "Generating image index",
-        assets
+        "Generators",
+        "Running all generators",
+        gen
       )
       await cmd.execute(...args)
     })
 
-  // Git commands
   const gitCommand = program
     .command("git")
     .description(chalk.gray("🔧 Git configuration tools"))
@@ -641,8 +635,8 @@ async function main() {
           chalk.gray("• Spring Boot: ") +
           chalk.cyan("dk sb start") +
           "\n" +
-          chalk.gray("• Assets: ") +
-          chalk.cyan("dk assets gen") +
+          chalk.gray("• Generators: ") +
+          chalk.cyan("dk gen") +
           "\n" +
           chalk.gray("• Git Fix: ") +
           chalk.cyan("dk git fix") +

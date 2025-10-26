@@ -333,18 +333,3 @@ export const generateImageIndex = async (): Promise<void> => {
     process.exit(1)
   }
 }
-
-export const assets = async (): Promise<void> => {
-  const args = process.argv.slice(2)
-  const subcommand = args[args.indexOf("assets") + 1]
-
-  if (subcommand === "gen" || subcommand === "generate") {
-    await generateImageIndex()
-  } else {
-    ui.error(
-      "Invalid subcommand",
-      "Available commands: 'dk assets gen' or 'dk assets generate'"
-    )
-    process.exit(1)
-  }
-}

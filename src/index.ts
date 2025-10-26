@@ -5,8 +5,9 @@ import { fileURLToPath } from "url"
 
 export * from "./commands/clean"
 export * from "./commands/git"
+export * from "./commands/gen"
+export * from "./commands/assets"
 
-// Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
