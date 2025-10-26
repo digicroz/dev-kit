@@ -314,6 +314,7 @@ async function configureGenerators(
 
   let defaultBaseDir = ""
   let defaultImageDir = "images"
+  let defaultPublicDir = ""
 
   if (srcAssetsImagesExists) {
     defaultBaseDir = "src/assets"
@@ -326,8 +327,9 @@ async function configureGenerators(
         defaultImageDir = "images"
         break
       case "nextjs":
-        defaultBaseDir = "public"
+        defaultBaseDir = "app/assets"
         defaultImageDir = "images"
+        defaultPublicDir = "public/assets"
         break
     }
   }
@@ -434,9 +436,38 @@ async function configureGenerators(
     }
   }
 
+  let publicDir = undefined
+
+  if (projectType === "nextjs") {
+    const { configurePublicDir } = await inquirer.prompt({
+      type: "confirm",
+      name: "configurePublicDir",
+      message:
+        "Would you like to configure a public directory for static assets?",
+      default: true,
+    })
+
+    if (configurePublicDir) {
+      const { pubDir } = await inquirer.prompt({
+        type: "input",
+        name: "pubDir",
+        message: "Enter the public directory path:",
+        default: defaultPublicDir,
+        validate: (input: string) => {
+          if (!input.trim()) {
+            return "Public directory path cannot be empty"
+          }
+          return true
+        },
+      })
+      publicDir = pubDir.trim()
+    }
+  }
+
   return {
     assets: {
       baseDir: baseDir.trim(),
+      ...(publicDir && { publicDir }),
       image: {
         baseDir: imageDir.trim(),
         nameCase: imageNameCase,

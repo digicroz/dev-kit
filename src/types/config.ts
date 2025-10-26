@@ -33,6 +33,7 @@ export interface AssetGeneratorConfig {
 
 export interface AssetsGeneratorConfig {
   baseDir: string
+  publicDir?: string
   image?: AssetGeneratorConfig
   svg?: AssetGeneratorConfig
 }

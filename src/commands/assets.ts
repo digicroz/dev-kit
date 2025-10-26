@@ -3,6 +3,7 @@ import { readConfig } from "../utils/config.js"
 import { promises as fs } from "fs"
 import path from "path"
 import { existsSync } from "fs"
+import sizeOf from "image-size"
 
 const IMAGE_EXTS = new Set([
   ".png",
@@ -203,16 +204,16 @@ export const generateImageIndex = async (): Promise<void> => {
 
   const assetsConfig = config.generators.assets
   const imageConfig = assetsConfig.image!
-
-  const imagesDir = path.resolve(
-    path.join(assetsConfig.baseDir, imageConfig.baseDir)
-  )
   const imageNameCase = imageConfig.nameCase || "kebab-case"
 
-  if (!existsSync(imagesDir)) {
+  const baseDirPath = path.resolve(
+    path.join(assetsConfig.baseDir, imageConfig.baseDir)
+  )
+
+  if (!existsSync(baseDirPath)) {
     ui.error(
       "Images directory not found",
-      `Directory ${imagesDir} does not exist`
+      `Directory ${baseDirPath} does not exist`
     )
     process.exit(1)
   }
@@ -223,8 +224,25 @@ export const generateImageIndex = async (): Promise<void> => {
   spinner.start()
 
   try {
-    spinner.text = "Renaming images to match naming convention..."
-    const renameMap = await renameImagesInDirectory(imagesDir, imageNameCase)
+    let publicDirPath: string | null = null
+    let publicFiles: string[] = []
+
+    if (config.projectType === "nextjs" && assetsConfig.publicDir) {
+      publicDirPath = path.resolve(
+        path.join(assetsConfig.publicDir, imageConfig.baseDir)
+      )
+
+      if (existsSync(publicDirPath)) {
+        spinner.text = "Renaming images in public directory..."
+        await renameImagesInDirectory(publicDirPath, imageNameCase)
+
+        spinner.text = "Scanning public directory..."
+        publicFiles = await walk(publicDirPath)
+      }
+    }
+
+    spinner.text = "Renaming images in base directory..."
+    const renameMap = await renameImagesInDirectory(baseDirPath, imageNameCase)
 
     if (renameMap.size > 0) {
       ui.info(
@@ -232,18 +250,54 @@ export const generateImageIndex = async (): Promise<void> => {
       )
     }
 
-    spinner.text = "Scanning for images..."
-    const allFiles = await walk(imagesDir)
+    spinner.text = "Scanning base directory..."
+    const baseFiles = await walk(baseDirPath)
+
+    const baseFileNames = new Set(
+      baseFiles.map((f) => {
+        const relPath = path.relative(baseDirPath, f)
+        return path.posix.normalize(
+          relPath.split(path.sep).join(path.posix.sep)
+        )
+      })
+    )
+
+    const publicFileNames = new Set(
+      publicFiles.map((f) => {
+        const relPath = path.relative(publicDirPath!, f)
+        return path.posix.normalize(
+          relPath.split(path.sep).join(path.posix.sep)
+        )
+      })
+    )
+
+    const duplicates = [...baseFileNames].filter((name) =>
+      publicFileNames.has(name)
+    )
+
+    if (duplicates.length > 0) {
+      spinner.fail("Failed to generate image index")
+      ui.error(
+        "Duplicate files found",
+        `The following files exist in both base and public directories:\n${duplicates.map((d) => `  - ${d}`).join("\n")}`
+      )
+      process.exit(1)
+    }
 
     spinner.text = "Processing images..."
 
     const usedVarNames = new Set<string>()
     const imports: string[] = []
+    const typeImports: string[] = []
     const tree: any = {}
 
-    for (const abs of allFiles) {
+    if (config.projectType === "nextjs" && publicFiles.length > 0) {
+      typeImports.push(`import type { StaticImageData } from "next/image";`)
+    }
+
+    for (const abs of baseFiles) {
       const relFromImages = path.posix.normalize(
-        path.relative(imagesDir, abs).split(path.sep).join(path.posix.sep)
+        path.relative(baseDirPath, abs).split(path.sep).join(path.posix.sep)
       )
 
       const dirParts =
@@ -277,9 +331,52 @@ export const generateImageIndex = async (): Promise<void> => {
       }
     }
 
+    if (config.projectType === "nextjs" && publicDirPath) {
+      for (const abs of publicFiles) {
+        const relFromImages = path.posix.normalize(
+          path.relative(publicDirPath, abs).split(path.sep).join(path.posix.sep)
+        )
+
+        const dirParts =
+          path.posix.dirname(relFromImages) === "."
+            ? []
+            : path.posix.dirname(relFromImages).split("/")
+
+        const baseNoExt = path.basename(
+          relFromImages,
+          path.extname(relFromImages)
+        )
+        const fileKey = toCamel(baseNoExt)
+        const dirKeys = dirParts.map(toCamel)
+
+        const imageBuffer = await fs.readFile(abs)
+        const dimensions = sizeOf(imageBuffer)
+        const publicPathParts = assetsConfig.publicDir!.split(path.sep)
+        const lastPart = publicPathParts[publicPathParts.length - 1]
+        const staticPath = `/${lastPart}/${imageConfig.baseDir}/${relFromImages}`
+
+        const varBase = toValidIdentifier(
+          [...dirParts, baseNoExt].map(toCamel).filter(Boolean).join("_") ||
+            toCamel(baseNoExt)
+        )
+        const varName = ensureUnique(varBase || "img", usedVarNames)
+
+        const staticImageData = `{
+  src: ${JSON.stringify(staticPath.replace("/public", ""))},
+  width: ${dimensions.width || 0},
+  height: ${dimensions.height || 0},
+}`
+
+        imports.push(`const ${varName}: StaticImageData = ${staticImageData};`)
+
+        const keysPath = [...dirKeys, fileKey || "image"]
+        setInTree(tree, keysPath, varName)
+      }
+    }
+
     const sortedTree = sortObjectKeysDeep(tree)
 
-    const outputFile = path.join(imagesDir, "index.ts")
+    const outputFile = path.join(baseDirPath, "index.ts")
 
     spinner.text = "Generating index file..."
 
@@ -288,17 +385,19 @@ export const generateImageIndex = async (): Promise<void> => {
 
     if (infoComment === "short_info") {
       header = `/* AUTO-GENERATED FILE. DO NOT EDIT.
-   * Run: dk assets gen
+   * Run: dk gen
    */
 `
     }
+
     let body: string
 
     if (config.projectType === "react-native-cli") {
       body = `export const ImageAssets = ${objectToTS(sortedTree)};\n`
     } else {
+      const allImports = [...typeImports, ...imports.sort()].join("\n")
       body =
-        `${imports.sort().join("\n")}\n\n` +
+        `${allImports}\n\n` +
         `export const ImageAssets = ${objectToTS(sortedTree)} as const;\n`
     }
 
@@ -308,22 +407,44 @@ export const generateImageIndex = async (): Promise<void> => {
 
     await ui.formatGeneratedFile(outputFile, process.cwd())
 
+    const totalFiles = baseFiles.length + publicFiles.length
     const message =
-      allFiles.length === 0
+      totalFiles === 0
         ? "Image index generated with empty object (no images found)"
-        : `Image index generated successfully with ${allFiles.length} images`
+        : `Image index generated successfully with ${totalFiles} images`
 
     ui.success("Image index generated successfully!", message)
 
-    ui.table([
-      { key: "Images processed", value: allFiles.length.toString() },
+    const tableData = [
+      { key: "Images processed", value: totalFiles.toString() },
+      { key: "Base directory images", value: baseFiles.length.toString() },
+    ]
+
+    if (publicFiles.length > 0) {
+      tableData.push({
+        key: "Public directory images",
+        value: publicFiles.length.toString(),
+      })
+    }
+
+    tableData.push(
       { key: "Output file", value: path.relative(process.cwd(), outputFile) },
       {
-        key: "Images directory",
-        value: path.relative(process.cwd(), imagesDir),
-      },
-      { key: "Naming convention", value: imageNameCase },
-    ])
+        key: "Base directory",
+        value: path.relative(process.cwd(), baseDirPath),
+      }
+    )
+
+    if (publicDirPath && publicFiles.length > 0) {
+      tableData.push({
+        key: "Public directory",
+        value: path.relative(process.cwd(), publicDirPath),
+      })
+    }
+
+    tableData.push({ key: "Naming convention", value: imageNameCase })
+
+    ui.table(tableData)
   } catch (error) {
     spinner.fail("Failed to generate image index")
     ui.error(
