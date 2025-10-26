@@ -14,7 +14,7 @@ import type {
   DatabaseConfig,
   DatabaseType,
   SpringBootConfig,
-  AssetsTypeGeneratorConfig,
+  GeneratorsConfig,
 } from "../types/config"
 
 const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
@@ -26,29 +26,25 @@ const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
 ]
 
 async function createInitialVSCodeSettings(
-  assetsConfig?: AssetsTypeGeneratorConfig
+  generatorsConfig?: GeneratorsConfig
 ): Promise<void> {
   const vscodeDir = path.join(process.cwd(), ".vscode")
   const settingsPath = path.join(vscodeDir, "settings.json")
 
-  // Create .vscode directory if it doesn't exist
   if (!existsSync(vscodeDir)) {
     await fs.mkdir(vscodeDir, { recursive: true })
   }
 
   let settings: any = {}
 
-  // Read existing settings if file exists
   if (existsSync(settingsPath)) {
     try {
       const settingsContent = await fs.readFile(settingsPath, "utf8")
       settings = JSON.parse(settingsContent)
     } catch (error) {
-      // If parsing fails, start fresh
     }
   }
 
-  // Initialize files.readonlyInclude if it doesn't exist
   if (!settings["files.readonlyInclude"]) {
     settings["files.readonlyInclude"] = {
       "dist/**": true,
@@ -56,13 +52,24 @@ async function createInitialVSCodeSettings(
     }
   }
 
-  // Add assets index file if assets config exists
-  if (assetsConfig) {
-    const indexPath = path.posix.join(assetsConfig.imagesDir, "index.ts")
-    settings["files.readonlyInclude"][indexPath] = true
+  if (generatorsConfig?.assets) {
+    const imageIndexPath = path.posix.join(
+      generatorsConfig.assets.baseDir,
+      generatorsConfig.assets.image?.baseDir || "images",
+      "index.ts"
+    )
+    settings["files.readonlyInclude"][imageIndexPath] = true
+
+    if (generatorsConfig.assets.svg) {
+      const svgIndexPath = path.posix.join(
+        generatorsConfig.assets.baseDir,
+        generatorsConfig.assets.svg.baseDir,
+        "index.ts"
+      )
+      settings["files.readonlyInclude"][svgIndexPath] = true
+    }
   }
 
-  // Write settings file
   await fs.writeFile(
     settingsPath,
     JSON.stringify(settings, null, 2) + "\n",
@@ -95,42 +102,35 @@ export async function init() {
   if (projectType) {
     let databaseConfig: DatabaseConfig | undefined
     let springBootConfig: SpringBootConfig | undefined
-    let assetsTypeGeneratorConfig: AssetsTypeGeneratorConfig | undefined
+    let generatorsConfig: GeneratorsConfig | undefined
 
-    // If it's a node-express project, detect database configuration
     if (projectType === "node-express") {
       databaseConfig = await detectAndConfigureDatabase()
     }
 
-    // If it's a spring-boot-microservice project, detect and configure services
     if (projectType === "spring-boot-microservice") {
       springBootConfig = await detectAndConfigureSpringBootServices()
     }
 
-    // If it's a supported frontend project, configure assets type generator
     const frontendTypes: DKProjectType[] = [
       "vite-react",
       "react-native-cli",
       "nextjs",
     ]
     if (frontendTypes.includes(projectType)) {
-      assetsTypeGeneratorConfig =
-        await configureAssetsTypeGenerator(projectType)
+      generatorsConfig = await configureGenerators(projectType)
     }
 
     const config = {
       projectType,
       ...(databaseConfig && { database: databaseConfig }),
       ...(springBootConfig && { springBoot: springBootConfig }),
-      ...(assetsTypeGeneratorConfig && {
-        assetsTypeGenerator: assetsTypeGeneratorConfig,
-      }),
+      ...(generatorsConfig && { generators: generatorsConfig }),
     }
     writeConfig(config)
 
-    // Create initial VS Code settings
     try {
-      await createInitialVSCodeSettings(assetsTypeGeneratorConfig)
+      await createInitialVSCodeSettings(generatorsConfig)
       ui.info("VS Code settings configured with readonly includes")
     } catch (error) {
       ui.warning(
@@ -146,8 +146,8 @@ export async function init() {
     if (springBootConfig) {
       ui.info("Spring Boot services detected and added to config.")
     }
-    if (assetsTypeGeneratorConfig) {
-      ui.info("Assets type generator configuration added to config.")
+    if (generatorsConfig) {
+      ui.info("Generators configuration added to config.")
     }
   } else {
     ui.error("No project type selected. dk.config.json not created.")
@@ -295,13 +295,13 @@ async function detectAndConfigureDatabase(): Promise<
   return config
 }
 
-async function configureAssetsTypeGenerator(
+async function configureGenerators(
   projectType: DKProjectType
-): Promise<AssetsTypeGeneratorConfig | undefined> {
+): Promise<GeneratorsConfig | undefined> {
   const { configureAssets } = await inquirer.prompt({
     type: "confirm",
     name: "configureAssets",
-    message: "Would you like to configure automatic image type generation?",
+    message: "Would you like to configure automatic asset type generation?",
     default: true,
   })
 
@@ -309,34 +309,48 @@ async function configureAssetsTypeGenerator(
     return undefined
   }
 
-  // Check if src/assets/images exists in the current directory
   const fs = await import("fs")
   const srcAssetsImages = "src/assets/images"
   const srcAssetsImagesExists = fs.existsSync(srcAssetsImages)
 
-  // Suggest default paths based on project type and existing directories
-  let defaultPath = ""
+  let defaultBaseDir = ""
+  let defaultImageDir = "images"
+
   if (srcAssetsImagesExists) {
-    defaultPath = srcAssetsImages
+    defaultBaseDir = "src/assets"
+    defaultImageDir = "images"
   } else {
     switch (projectType) {
       case "vite-react":
-        defaultPath = "src/assets/images"
-        break
       case "react-native-cli":
-        defaultPath = "src/assets/images"
+        defaultBaseDir = "src/assets"
+        defaultImageDir = "images"
         break
       case "nextjs":
-        defaultPath = "public/images"
+        defaultBaseDir = "public"
+        defaultImageDir = "images"
         break
     }
   }
 
-  const { imagesDir } = await inquirer.prompt({
+  const { baseDir } = await inquirer.prompt({
     type: "input",
-    name: "imagesDir",
-    message: `Enter the path to your images directory:${srcAssetsImagesExists ? " (detected existing directory)" : ""}`,
-    default: defaultPath,
+    name: "baseDir",
+    message: "Enter the base directory for assets:",
+    default: defaultBaseDir,
+    validate: (input: string) => {
+      if (!input.trim()) {
+        return "Base directory path cannot be empty"
+      }
+      return true
+    },
+  })
+
+  const { imageDir } = await inquirer.prompt({
+    type: "input",
+    name: "imageDir",
+    message: "Enter the directory for images (relative to base directory):",
+    default: defaultImageDir,
     validate: (input: string) => {
       if (!input.trim()) {
         return "Images directory path cannot be empty"
@@ -368,9 +382,68 @@ async function configureAssetsTypeGenerator(
     default: "short_info",
   })
 
+  const { configureSvg } = await inquirer.prompt({
+    type: "confirm",
+    name: "configureSvg",
+    message: "Would you like to also configure SVG generation?",
+    default: false,
+  })
+
+  let svgConfig = undefined
+
+  if (configureSvg) {
+    const { svgDir } = await inquirer.prompt({
+      type: "input",
+      name: "svgDir",
+      message: "Enter the directory for SVGs (relative to base directory):",
+      default: "svg",
+      validate: (input: string) => {
+        if (!input.trim()) {
+          return "SVG directory path cannot be empty"
+        }
+        return true
+      },
+    })
+
+    const { svgNameCase } = await inquirer.prompt({
+      type: "list",
+      name: "svgNameCase",
+      message: "How would you like SVG files to be named?",
+      choices: [
+        { name: "kebab-case (my-icon.svg)", value: "kebab-case" },
+        { name: "snake_case (my_icon.svg)", value: "snake_case" },
+        { name: "any (keep original names)", value: "any" },
+      ],
+      default: "kebab-case",
+    })
+
+    const { svgInfoComment } = await inquirer.prompt({
+      type: "list",
+      name: "svgInfoComment",
+      message: "How would you like the info comment in generated SVG index.ts?",
+      choices: [
+        { name: "Short info comment (default)", value: "short_info" },
+        { name: "Hidden (no comment)", value: "hidden" },
+      ],
+      default: "short_info",
+    })
+
+    svgConfig = {
+      baseDir: svgDir.trim(),
+      nameCase: svgNameCase,
+      infoComment: svgInfoComment,
+    }
+  }
+
   return {
-    imagesDir: imagesDir.trim(),
-    imageNameCase,
-    infoComment,
+    assets: {
+      baseDir: baseDir.trim(),
+      image: {
+        baseDir: imageDir.trim(),
+        nameCase: imageNameCase,
+        infoComment: infoComment,
+      },
+      ...(svgConfig && { svg: svgConfig }),
+    },
   }
 }

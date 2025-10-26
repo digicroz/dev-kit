@@ -7,6 +7,8 @@ import {
   DatabaseConfig,
   DatabaseType,
   SpringBootConfig,
+  GeneratorsConfig,
+  AssetsTypeGeneratorConfig,
 } from "../types/config"
 
 const CONFIG_FILE = "dk.config.json"
@@ -22,7 +24,8 @@ export function configExists(rootDir: string = process.cwd()): boolean {
 export function readConfig(rootDir: string = process.cwd()): DKConfig | null {
   if (!configExists(rootDir)) return null
   const raw = readFileSync(getConfigPath(rootDir), "utf8")
-  return JSON.parse(raw)
+  const config = JSON.parse(raw)
+  return migrateConfigIfNeeded(config)
 }
 
 export function getConfigVersion(config: DKConfig | null): number {
@@ -211,4 +214,38 @@ function parseEnvForDatabase(
   }
 
   return Object.keys(config).length > 0 ? config : null
+}
+
+export function migrateConfigIfNeeded(config: DKConfig): DKConfig {
+  if (!config.assetsTypeGenerator) {
+    return config
+  }
+
+  if (config.generators?.assets) {
+    return config
+  }
+
+  const oldAssets = config.assetsTypeGenerator
+  const imagesDir = oldAssets.imagesDir
+
+  const baseDir = imagesDir.split("/")[0]
+  const imageBaseDir = imagesDir.substring(baseDir.length + 1) || "images"
+
+  const newConfig: DKConfig = {
+    ...config,
+    generators: {
+      assets: {
+        baseDir,
+        image: {
+          baseDir: imageBaseDir,
+          nameCase: oldAssets.imageNameCase || "kebab-case",
+          infoComment: oldAssets.infoComment || "short_info",
+        },
+      },
+    },
+  }
+
+  delete newConfig.assetsTypeGenerator
+
+  return newConfig
 }

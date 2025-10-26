@@ -25,6 +25,22 @@ export interface SpringBootConfig {
   services: SpringBootService[]
 }
 
+export interface AssetGeneratorConfig {
+  baseDir: string
+  nameCase?: "kebab-case" | "snake_case" | "any"
+  infoComment?: "hidden" | "short_info"
+}
+
+export interface AssetsGeneratorConfig {
+  baseDir: string
+  image?: AssetGeneratorConfig
+  svg?: AssetGeneratorConfig
+}
+
+export interface GeneratorsConfig {
+  assets?: AssetsGeneratorConfig
+}
+
 export interface AssetsTypeGeneratorConfig {
   imagesDir: string
   imageNameCase?: "kebab-case" | "snake_case" | "any"
@@ -36,6 +52,7 @@ export interface DKConfig {
   projectType: DKProjectType
   database?: DatabaseConfig
   springBoot?: SpringBootConfig
+  generators?: GeneratorsConfig
   assetsTypeGenerator?: AssetsTypeGeneratorConfig
 }
 

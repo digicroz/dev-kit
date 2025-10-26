@@ -184,7 +184,6 @@ export const generateImageIndex = async (): Promise<void> => {
     process.exit(1)
   }
 
-  // Check if project type supports assets generation
   const supportedTypes = ["vite-react", "react-native-cli", "nextjs"]
   if (!supportedTypes.includes(config.projectType)) {
     ui.error(
@@ -194,17 +193,21 @@ export const generateImageIndex = async (): Promise<void> => {
     process.exit(1)
   }
 
-  // Check if assetsTypeGenerator is configured
-  if (!config.assetsTypeGenerator?.imagesDir) {
+  if (!config.generators?.assets?.image) {
     ui.warning(
-      "Images directory not configured",
-      "Please configure 'assetsTypeGenerator.imagesDir' in dk.config.json"
+      "Images configuration not found",
+      "Please configure 'generators.assets.image' in dk.config.json"
     )
     return
   }
 
-  const imagesDir = path.resolve(config.assetsTypeGenerator.imagesDir)
-  const imageNameCase = config.assetsTypeGenerator.imageNameCase || "kebab-case"
+  const assetsConfig = config.generators.assets
+  const imageConfig = assetsConfig.image!
+
+  const imagesDir = path.resolve(
+    path.join(assetsConfig.baseDir, imageConfig.baseDir)
+  )
+  const imageNameCase = imageConfig.nameCase || "kebab-case"
 
   if (!existsSync(imagesDir)) {
     ui.error(
@@ -220,7 +223,6 @@ export const generateImageIndex = async (): Promise<void> => {
   spinner.start()
 
   try {
-    // First, rename all images according to the specified naming convention
     spinner.text = "Renaming images to match naming convention..."
     const renameMap = await renameImagesInDirectory(imagesDir, imageNameCase)
 
@@ -230,7 +232,6 @@ export const generateImageIndex = async (): Promise<void> => {
       )
     }
 
-    // Now scan for all files (including renamed ones)
     spinner.text = "Scanning for images..."
     const allFiles = await walk(imagesDir)
 
@@ -257,17 +258,13 @@ export const generateImageIndex = async (): Promise<void> => {
       const fileKey = toCamel(baseNoExt)
       const dirKeys = dirParts.map(toCamel)
 
-      // Import path should be relative from index.ts
       const importPath = `./${relFromImages}`
 
-      // For React Native CLI projects, use require() directly in tree
-      // For other projects, use imports with variable names
       if (config.projectType === "react-native-cli") {
         const requireStatement = `require(${JSON.stringify(importPath)})`
         const keysPath = [...dirKeys, fileKey || "image"]
         setInTree(tree, keysPath, requireStatement)
       } else {
-        // Variable name: dir parts + file name joined to avoid collisions
         const varBase = toValidIdentifier(
           [...dirParts, baseNoExt].map(toCamel).filter(Boolean).join("_") ||
             toCamel(baseNoExt)
@@ -280,14 +277,13 @@ export const generateImageIndex = async (): Promise<void> => {
       }
     }
 
-    // Stable ordering
     const sortedTree = sortObjectKeysDeep(tree)
 
     const outputFile = path.join(imagesDir, "index.ts")
 
     spinner.text = "Generating index file..."
 
-    const infoComment = config.assetsTypeGenerator.infoComment || "short_info"
+    const infoComment = imageConfig.infoComment || "short_info"
     let header = ""
 
     if (infoComment === "short_info") {
@@ -296,14 +292,11 @@ export const generateImageIndex = async (): Promise<void> => {
    */
 `
     }
-    // If infoComment === "hidden", header remains empty
     let body: string
 
     if (config.projectType === "react-native-cli") {
-      // For React Native CLI, export with require statements in nested structure
       body = `export const ImageAssets = ${objectToTS(sortedTree)};\n`
     } else {
-      // For other projects, use imports and nested tree structure
       body =
         `${imports.sort().join("\n")}\n\n` +
         `export const ImageAssets = ${objectToTS(sortedTree)} as const;\n`
@@ -313,7 +306,6 @@ export const generateImageIndex = async (): Promise<void> => {
 
     spinner.stop()
 
-    // Apply ESLint and Prettier formatting if configs are present
     await ui.formatGeneratedFile(outputFile, process.cwd())
 
     const message =
@@ -323,7 +315,6 @@ export const generateImageIndex = async (): Promise<void> => {
 
     ui.success("Image index generated successfully!", message)
 
-    // Show summary
     ui.table([
       { key: "Images processed", value: allFiles.length.toString() },
       { key: "Output file", value: path.relative(process.cwd(), outputFile) },
