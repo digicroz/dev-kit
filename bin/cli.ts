@@ -26,7 +26,7 @@ import { init as runInit } from "../src/commands/init.js"
 import { updateConfig } from "../src/commands/config.js"
 import { startSpringBootServices } from "../src/commands/springBoot.js"
 import { gen } from "../src/commands/gen.js"
-import { gitFix, gitAddCommit } from "../src/commands/git.js"
+import { gitFix, gitAddCommit, gitAddCommitPush } from "../src/commands/git.js"
 import {
   dbStatus,
   dbDumpCreate,
@@ -556,6 +556,18 @@ async function main() {
       await cmd.execute(...args)
     })
 
+  gitCommand
+    .command("acp")
+    .description(chalk.gray("🚀 Add, commit, and push all changes"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "Git add, commit & push",
+        "Staging, committing, and pushing changes",
+        gitAddCommitPush
+      )
+      await cmd.execute(...args)
+    })
+
   // Database commands (only for node-express projects)
   const dbCommand = program
     .command("db")
@@ -655,6 +667,9 @@ async function main() {
           "\n" +
           chalk.gray("• Git Add & Commit: ") +
           chalk.cyan("dk git ac") +
+          "\n" +
+          chalk.gray("• Git Add, Commit & Push: ") +
+          chalk.cyan("dk git acp") +
           "\n" +
           chalk.gray("• DB Status: ") +
           chalk.cyan("dk db status") +

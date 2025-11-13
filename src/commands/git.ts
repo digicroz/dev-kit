@@ -143,6 +143,103 @@ export const gitAddCommit = async () => {
   }
 }
 
+export const gitAddCommitPush = async () => {
+  ui.section("🚀 Git Add, Commit & Push", "Stage, commit, and push all changes")
+
+  const gitStatusResult = await runGitCommand(["status", "--porcelain"])
+  const isGitRepo = gitStatusResult.success
+
+  if (!isGitRepo) {
+    ui.error("Not in a git repository", "Please run this command from a git repository.")
+    return { ok: false, error: "not_git_repo" }
+  }
+
+  if (!gitStatusResult.output) {
+    ui.info("No changes to commit", "Working tree is clean.")
+    return { ok: true, noChanges: true }
+  }
+
+  console.log(chalk.gray("\nCurrent changes:"))
+  console.log(gitStatusResult.output)
+  console.log("")
+
+  const addSpinner = ui.createSpinner("Staging all changes...")
+  addSpinner.start()
+
+  const addResult = await runGitCommand(["add", "."])
+  addSpinner.stop()
+
+  if (!addResult.success) {
+    ui.error("Failed to stage changes", addResult.error || "Unknown error")
+    return { ok: false, error: "add_failed" }
+  }
+
+  ui.success("Changes staged", "All changes have been added.")
+
+  let commitMessage = ""
+  while (!commitMessage.trim()) {
+    const { message } = await inquirer.prompt({
+      type: "input",
+      name: "message",
+      message: chalk.bold("📝 Enter commit message:"),
+      validate: (input: string) => {
+        const trimmed = input.trim()
+        if (!trimmed) {
+          return "Commit message cannot be empty. Please enter a message."
+        }
+        return true
+      },
+    })
+    commitMessage = message.trim()
+  }
+
+  const commitSpinner = ui.createSpinner("Committing changes...")
+  commitSpinner.start()
+
+  const commitResult = await runGitCommand(["commit", "-m", commitMessage])
+  commitSpinner.stop()
+
+  if (!commitResult.success) {
+    ui.error("Failed to commit changes", commitResult.error || "Unknown error")
+    return { ok: false, error: "commit_failed" }
+  }
+
+  ui.success("Commit successful!", commitMessage)
+  
+  if (commitResult.output) {
+    console.log("")
+    console.log(chalk.gray(commitResult.output))
+  }
+
+  // Get current branch name
+  const branchResult = await runGitCommand(["branch", "--show-current"])
+  const currentBranch = branchResult.output || "main"
+
+  const pushSpinner = ui.createSpinner(`Pushing to ${currentBranch}...`)
+  pushSpinner.start()
+
+  const pushResult = await runGitCommand(["push", "origin", currentBranch])
+  pushSpinner.stop()
+
+  if (!pushResult.success) {
+    ui.error("Failed to push changes", pushResult.error || "Unknown error")
+    return { ok: false, error: "push_failed", commitMessage }
+  }
+
+  ui.success("Push successful!", `Changes pushed to ${currentBranch}`)
+  
+  if (pushResult.output || pushResult.error) {
+    console.log("")
+    console.log(chalk.gray(pushResult.output || pushResult.error))
+  }
+
+  return {
+    ok: true,
+    commitMessage,
+    branch: currentBranch,
+  }
+}
+
 export const gitFix = async () => {
   ui.section("🔧 Git Configuration Fix", "Setting core.ignorecase to false")
 
