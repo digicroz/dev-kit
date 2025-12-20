@@ -2,6 +2,8 @@ import { ui } from "../utils/ui-helpers.js"
 import { spawn } from "child_process"
 import inquirer from "inquirer"
 import chalk from "chalk"
+import { readConfig } from "../utils/config.js"
+import { DKProjectType } from "../types/config.js"
 
 type GitConfigScope = "local" | "global" | "both"
 
@@ -13,7 +15,6 @@ const runGitCommand = (
     const child = spawn("git", args, {
       cwd: cwd || process.cwd(),
       stdio: ["pipe", "pipe", "pipe"],
-      shell: true,
     })
 
     let stdout = ""
@@ -419,5 +420,121 @@ export const gitFix = async () => {
       failed: failed.length,
       isGitRepo,
     },
+  }
+}
+
+export const gitAutoCommit = async () => {
+  ui.section("🔄 Git Auto Commit", "Committing project-specific files")
+
+  // Read project configuration
+  const config = readConfig()
+  if (!config) {
+    ui.error("Configuration not found", "Please run 'dk init' first.")
+    return { ok: false, error: "no_config" }
+  }
+
+  const projectType = config.projectType
+
+  // Check if we're in a git repository
+  const gitStatusResult = await runGitCommand(["status", "--porcelain"])
+  const isGitRepo = gitStatusResult.success
+
+  if (!isGitRepo) {
+    ui.error("Not in a git repository", "Please run this command from a git repository.")
+    return { ok: false, error: "not_git_repo" }
+  }
+
+  // Project-type specific commit logic
+  let addArgs: string[] = []
+  let commitMessage = ""
+
+  switch (projectType) {
+    case "node-express":
+      ui.info("Project type", "node-express")
+      addArgs = ["add", "./prisma/*"]
+      commitMessage = "prisma changes"
+      break
+
+    case "vite-react":
+      ui.info("Project type", "vite-react")
+      addArgs = ["add", "./b2fPortal"]
+      
+      // Format date as DD/MM/YYYY, h:mm:ss am/pm
+      const now = new Date()
+      const day = String(now.getDate()).padStart(2, "0")
+      const month = String(now.getMonth() + 1).padStart(2, "0")
+      const year = now.getFullYear()
+      
+      let hours = now.getHours()
+      const minutes = String(now.getMinutes()).padStart(2, "0")
+      const seconds = String(now.getSeconds()).padStart(2, "0")
+      const ampm = hours >= 12 ? "pm" : "am"
+      hours = hours % 12 || 12
+      
+      commitMessage = `${day}/${month}/${year}, ${hours}:${minutes}:${seconds} ${ampm} b2fPortal updated`
+      break
+
+    default:
+      ui.error(
+        "Unsupported project type",
+        `Auto-commit is not configured for project type: ${projectType}`
+      )
+      return { ok: false, error: "unsupported_project_type" }
+  }
+
+  // Check if there are changes to commit
+  const checkChangesResult = await runGitCommand(["status", "--porcelain"])
+  if (!checkChangesResult.output) {
+    ui.info("No changes to commit", "Working tree is clean.")
+    return { ok: true, noChanges: true }
+  }
+
+  // Stage the files
+  const addSpinner = ui.createSpinner(`Staging files: ${addArgs.slice(1).join(" ")}...`)
+  addSpinner.start()
+
+  const addResult = await runGitCommand(addArgs)
+  addSpinner.stop()
+
+  if (!addResult.success) {
+    ui.error("Failed to stage files", addResult.error || "Unknown error")
+    return { ok: false, error: "add_failed" }
+  }
+
+  // Check if there are staged changes
+  const stagedResult = await runGitCommand(["diff", "--cached", "--name-only"])
+  if (!stagedResult.output) {
+    ui.info("No staged changes", "The specified files have no changes.")
+    return { ok: true, noChanges: true }
+  }
+
+  ui.success("Files staged", stagedResult.output)
+  console.log(chalk.gray("\nStaged files:"))
+  console.log(stagedResult.output)
+  console.log("")
+
+  // Commit the changes
+  const commitSpinner = ui.createSpinner("Committing changes...")
+  commitSpinner.start()
+
+  const commitResult = await runGitCommand(["commit", "-m", commitMessage])
+  commitSpinner.stop()
+
+  if (!commitResult.success) {
+    ui.error("Failed to commit changes", commitResult.error || "Unknown error")
+    return { ok: false, error: "commit_failed" }
+  }
+
+  ui.success("Commit successful!", commitMessage)
+  
+  if (commitResult.output) {
+    console.log("")
+    console.log(chalk.gray(commitResult.output))
+  }
+
+  return {
+    ok: true,
+    commitMessage,
+    projectType,
   }
 }

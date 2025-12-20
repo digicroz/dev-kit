@@ -26,7 +26,7 @@ import { init as runInit } from "../src/commands/init.js"
 import { updateConfig } from "../src/commands/config.js"
 import { startSpringBootServices } from "../src/commands/springBoot.js"
 import { gen } from "../src/commands/gen.js"
-import { gitFix, gitAddCommit, gitAddCommitPush } from "../src/commands/git.js"
+import { gitFix, gitAddCommit, gitAddCommitPush, gitAutoCommit } from "../src/commands/git.js"
 import {
   dbStatus,
   dbDumpCreate,
@@ -528,6 +528,18 @@ async function main() {
       await cmd.execute(...args)
     })
 
+  program
+    .command("commit")
+    .description(chalk.gray("🔄 Auto-commit project-specific files"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "Git auto commit",
+        "Committing project-specific files",
+        gitAutoCommit
+      )
+      await cmd.execute(...args)
+    })
+
   const gitCommand = program
     .command("git")
     .description(chalk.gray("🔧 Git configuration tools"))
@@ -564,6 +576,18 @@ async function main() {
         "Git add, commit & push",
         "Staging, committing, and pushing changes",
         gitAddCommitPush
+      )
+      await cmd.execute(...args)
+    })
+
+  gitCommand
+    .command("commit")
+    .description(chalk.gray("🔄 Auto-commit project-specific files"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "Git auto commit",
+        "Committing project-specific files",
+        gitAutoCommit
       )
       await cmd.execute(...args)
     })
