@@ -6,7 +6,6 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import boxen from "boxen";
 import gradientString from "gradient-string";
-import figlet from "figlet";
 import ora from "ora";
 
 import { clean } from "../src/commands/clean.js";
@@ -50,16 +49,6 @@ const version = packageJson.version;
 // Beautiful animated welcome banner
 async function showWelcomeBanner() {
   console.clear();
-
-  // More compact ASCII Art Title
-  const title = figlet.textSync("DK", {
-    font: "Slant",
-    horizontalLayout: "fitted",
-    width: 50,
-  });
-
-  // Show title with rainbow gradient
-  console.log(gradientString.rainbow(title));
 
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
