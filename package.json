@@ -1,6 +1,6 @@
 {
   "name": "@digicroz/dev-kit",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A comprehensive CLI toolkit for modern development workflows - featuring task automation, project cleaning, and developer utilities",
   "keywords": [
     "cli",
