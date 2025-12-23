@@ -81,20 +81,53 @@ async function showWelcomeBanner() {
   console.log(welcomeMessage);
 }
 
-// Check if command requires project mode
-function requiresProjectMode(commandName: string): boolean {
-  const projectModeCommands = [
-    "clean",
-    "deploy",
-    "rn",
-    "react-native",
-    "sb",
-    "spring-boot",
-    "gen",
-    "commit",
-    "db",
-  ];
-  return projectModeCommands.some((cmd) => commandName.includes(cmd));
+// Helper function to create styled boxen messages
+function createBox(
+  message: string,
+  color: string,
+  backgroundColor: string = "#0a0a1a"
+) {
+  return boxen(message, {
+    padding: { top: 0, bottom: 0, left: 1, right: 1 },
+    margin: { top: 1, bottom: 1, left: 0, right: 0 },
+    borderStyle: "round",
+    borderColor: color,
+    backgroundColor,
+  });
+}
+
+// Show project mode required error
+function showProjectModeRequired() {
+  console.log("\n");
+  console.log(
+    createBox(
+      chalk.red("⚠️ Project Mode Required") +
+        "\n" +
+        chalk.gray("This command requires dk.config.json") +
+        "\n" +
+        chalk.cyan("Run 'dk init' to create project configuration"),
+      "red",
+      "#1a0000"
+    )
+  );
+  process.exit(1);
+}
+
+// Handle user cancellation gracefully
+function handleCancellation(commandName: string) {
+  console.log("\n");
+  console.log(
+    createBox(
+      chalk.yellow("⚠️ ") + chalk.white(`${commandName} cancelled by user`),
+      "yellow",
+      "#1a1a00"
+    )
+  );
+}
+
+// Check if error is user cancellation
+function isCancellationError(error: any): boolean {
+  return error.name === "ExitPromptError" || error.message?.includes("SIGINT");
 }
 
 // Enhanced command wrapper with loading animation
@@ -110,24 +143,7 @@ function createEnhancedCommand(
     async execute(...args: any[]) {
       // Check if command requires project mode
       if (requiresProject && !configExists()) {
-        console.log("\n");
-        console.log(
-          boxen(
-            chalk.red("⚠️ Project Mode Required") +
-              "\n" +
-              chalk.gray("This command requires dk.config.json") +
-              "\n" +
-              chalk.cyan("Run 'dk init' to create project configuration"),
-            {
-              padding: { top: 0, bottom: 0, left: 1, right: 1 },
-              margin: { top: 1, bottom: 1, left: 0, right: 0 },
-              borderStyle: "round",
-              borderColor: "red",
-              backgroundColor: "#1a0000",
-            }
-          )
-        );
-        process.exit(1);
+        showProjectModeRequired();
       }
 
       const spinner = ora({
@@ -145,22 +161,8 @@ function createEnhancedCommand(
         spinner.stop();
 
         // Handle user cancellation gracefully
-        if (
-          error.name === "ExitPromptError" ||
-          error.message?.includes("SIGINT")
-        ) {
-          console.log("\n");
-          console.log(
-            boxen(
-              chalk.yellow("⚠️ ") + chalk.white(`${name} cancelled by user`),
-              {
-                padding: { top: 0, bottom: 0, left: 1, right: 1 },
-                borderStyle: "round",
-                borderColor: "yellow",
-                backgroundColor: "#1a1a00",
-              }
-            )
-          );
+        if (isCancellationError(error)) {
+          handleCancellation(name);
           return;
         }
 
@@ -191,12 +193,11 @@ process.on("SIGINT", () => {
 process.on("uncaughtException", (error) => {
   console.log("\n");
   console.log(
-    boxen(chalk.red("💥 Error: ") + chalk.white(error.message), {
-      padding: { top: 0, bottom: 0, left: 1, right: 1 },
-      borderStyle: "round",
-      borderColor: "red",
-      backgroundColor: "#1a0000",
-    })
+    createBox(
+      chalk.red("💥 Error: ") + chalk.white(error.message),
+      "red",
+      "#1a0000"
+    )
   );
   process.exit(1);
 });
@@ -227,7 +228,7 @@ async function main() {
   const modeColor = projectMode ? "green" : "yellow";
   const modeIcon = projectMode ? "📁" : "⚡";
   console.log(
-    boxen(
+    createBox(
       chalk[modeColor](`${modeIcon} ${mode}`) +
         "\n" +
         chalk.gray(
@@ -235,13 +236,8 @@ async function main() {
             ? "Running with project configuration"
             : "Running in standalone mode - some commands require 'dk init'"
         ),
-      {
-        padding: { top: 0, bottom: 0, left: 1, right: 1 },
-        margin: { top: 0, bottom: 1, left: 0, right: 0 },
-        borderStyle: "round",
-        borderColor: modeColor,
-        backgroundColor: projectMode ? "#0a1a0a" : "#1a1a00",
-      }
+      modeColor,
+      projectMode ? "#0a1a0a" : "#1a1a00"
     )
   );
 
@@ -317,41 +313,18 @@ async function main() {
     .alias("d")
     .description(chalk.gray("🚀 Deploy with confidence"))
     .action(async () => {
-      // Check if command requires project mode
       if (!configExists()) {
-        console.log("\n");
-        console.log(
-          boxen(
-            chalk.red("⚠️ Project Mode Required") +
-              "\n" +
-              chalk.gray("This command requires dk.config.json") +
-              "\n" +
-              chalk.cyan("Run 'dk init' to create project configuration"),
-            {
-              padding: { top: 0, bottom: 0, left: 1, right: 1 },
-              margin: { top: 1, bottom: 1, left: 0, right: 0 },
-              borderStyle: "round",
-              borderColor: "red",
-              backgroundColor: "#1a0000",
-            }
-          )
-        );
-        process.exit(1);
+        showProjectModeRequired();
       }
 
       try {
         console.log(
-          boxen(
+          createBox(
             gradientString("magenta", "cyan")("🚀 Deployment Center") +
               "\n" +
               chalk.gray("Choose your destination"),
-            {
-              padding: { top: 0, bottom: 0, left: 1, right: 1 },
-              margin: { top: 1, bottom: 1, left: 0, right: 0 },
-              borderStyle: "round",
-              borderColor: "magenta",
-              backgroundColor: "#0a0a1a",
-            }
+            "magenta",
+            "#0a0a1a"
           )
         );
 
@@ -392,26 +365,10 @@ async function main() {
           await deployProd();
         }
       } catch (error: any) {
-        // Handle user cancellation gracefully
-        if (
-          error.name === "ExitPromptError" ||
-          error.message?.includes("SIGINT")
-        ) {
-          console.log("\n");
-          console.log(
-            boxen(
-              chalk.yellow("⚠️ ") + chalk.white("Deployment cancelled by user"),
-              {
-                padding: { top: 0, bottom: 0, left: 1, right: 1 },
-                borderStyle: "round",
-                borderColor: "yellow",
-                backgroundColor: "#1a1a00",
-              }
-            )
-          );
+        if (isCancellationError(error)) {
+          handleCancellation("Deployment");
           return;
         }
-        // Re-throw other errors
         throw error;
       }
     });
@@ -452,41 +409,18 @@ async function main() {
     .command("build")
     .description(chalk.gray("🔨 Build React Native app"))
     .action(async () => {
-      // Check if command requires project mode
       if (!configExists()) {
-        console.log("\n");
-        console.log(
-          boxen(
-            chalk.red("⚠️ Project Mode Required") +
-              "\n" +
-              chalk.gray("This command requires dk.config.json") +
-              "\n" +
-              chalk.cyan("Run 'dk init' to create project configuration"),
-            {
-              padding: { top: 0, bottom: 0, left: 1, right: 1 },
-              margin: { top: 1, bottom: 1, left: 0, right: 0 },
-              borderStyle: "round",
-              borderColor: "red",
-              backgroundColor: "#1a0000",
-            }
-          )
-        );
-        process.exit(1);
+        showProjectModeRequired();
       }
 
       try {
         console.log(
-          boxen(
+          createBox(
             gradientString("green", "blue")("📱 React Native Build Center") +
               "\n" +
               chalk.gray("Choose your build target"),
-            {
-              padding: { top: 0, bottom: 0, left: 1, right: 1 },
-              margin: { top: 1, bottom: 1, left: 0, right: 0 },
-              borderStyle: "round",
-              borderColor: "green",
-              backgroundColor: "#0a1a0a",
-            }
+            "green",
+            "#0a1a0a"
           )
         );
 
@@ -538,26 +472,10 @@ async function main() {
           await buildAndroidDebug(true);
         }
       } catch (error: any) {
-        // Handle user cancellation gracefully
-        if (
-          error.name === "ExitPromptError" ||
-          error.message?.includes("SIGINT")
-        ) {
-          console.log("\n");
-          console.log(
-            boxen(
-              chalk.yellow("⚠️ ") + chalk.white("Build cancelled by user"),
-              {
-                padding: { top: 0, bottom: 0, left: 1, right: 1 },
-                borderStyle: "round",
-                borderColor: "yellow",
-                backgroundColor: "#1a1a00",
-              }
-            )
-          );
+        if (isCancellationError(error)) {
+          handleCancellation("Build");
           return;
         }
-        // Re-throw other errors
         throw error;
       }
     });
@@ -789,7 +707,7 @@ async function main() {
   program.on("--help", () => {
     console.log("\n");
     console.log(
-      boxen(
+      createBox(
         gradientString("blue", "cyan")("💡 Pro Tips") +
           "\n" +
           chalk.gray("• Quick: ") +
@@ -832,12 +750,7 @@ async function main() {
           "\n" +
           chalk.gray("• Help: ") +
           chalk.cyan("dk --help"),
-        {
-          padding: { top: 0, bottom: 0, left: 1, right: 1 },
-          borderStyle: "round",
-          borderColor: "blue",
-          backgroundColor: "#0a0a1a",
-        }
+        "blue"
       )
     );
   });
@@ -847,18 +760,12 @@ async function main() {
   // Show help if no command provided
   if (!process.argv.slice(2).length) {
     console.log(
-      boxen(
+      createBox(
         chalk.blue("ℹ️ ") +
           chalk.white("Run ") +
           chalk.cyan("dk --help") +
           chalk.white(" for commands"),
-        {
-          padding: { top: 0, bottom: 0, left: 1, right: 1 },
-          margin: { top: 1, bottom: 0, left: 0, right: 0 },
-          borderStyle: "round",
-          borderColor: "blue",
-          backgroundColor: "#0a0a1a",
-        }
+        "blue"
       )
     );
   }
