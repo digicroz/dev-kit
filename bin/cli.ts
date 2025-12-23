@@ -1,60 +1,65 @@
-import { Command } from "commander"
-import chalk from "chalk"
-import inquirer from "inquirer"
-import { readFileSync } from "fs"
-import { fileURLToPath } from "url"
-import { dirname, join } from "path"
-import boxen from "boxen"
-import gradientString from "gradient-string"
-import figlet from "figlet"
-import ora from "ora"
+import { Command } from "commander";
+import chalk from "chalk";
+import inquirer from "inquirer";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import boxen from "boxen";
+import gradientString from "gradient-string";
+import figlet from "figlet";
+import ora from "ora";
 
-import { clean } from "../src/commands/clean.js"
-import { deployDev, deployProd } from "../src/commands/deploy.js"
-import { doctor } from "../src/commands/doctor.js"
+import { clean } from "../src/commands/clean.js";
+import { deployDev, deployProd } from "../src/commands/deploy.js";
+import { doctor } from "../src/commands/doctor.js";
 import {
   buildAndroidRelease,
   buildAndroidDebug,
-} from "../src/commands/reactNative.js"
-import { ui } from "../src/utils/ui-helpers.js"
+} from "../src/commands/reactNative.js";
+import { ui } from "../src/utils/ui-helpers.js";
 import {
   configExists,
   readConfig,
   isConfigOutdated,
-} from "../src/utils/config.js"
-import { init as runInit } from "../src/commands/init.js"
-import { updateConfig } from "../src/commands/config.js"
-import { startSpringBootServices } from "../src/commands/springBoot.js"
-import { gen } from "../src/commands/gen.js"
-import { gitFix, gitAddCommit, gitAddCommitPush, gitAutoCommit } from "../src/commands/git.js"
+} from "../src/utils/config.js";
+import { init as runInit } from "../src/commands/init.js";
+import { updateConfig } from "../src/commands/config.js";
+import { startSpringBootServices } from "../src/commands/springBoot.js";
+import { gen } from "../src/commands/gen.js";
+import {
+  gitFix,
+  gitAddCommit,
+  gitAddCommitPush,
+  gitAutoCommit,
+} from "../src/commands/git.js";
 import {
   dbStatus,
   dbDumpCreate,
   dbDumpApply,
   dbDropAllTables,
-} from "../src/commands/database.js"
+} from "../src/commands/database.js";
 
 // Get package.json version
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const packageJson = JSON.parse(
   readFileSync(join(__dirname, "../package.json"), "utf8")
-)
-const version = packageJson.version
+);
+const version = packageJson.version;
 
 // Beautiful animated welcome banner
 async function showWelcomeBanner() {
-  console.clear()
+  console.clear();
 
   // More compact ASCII Art Title
   const title = figlet.textSync("DK", {
     font: "Slant",
     horizontalLayout: "fitted",
     width: 50,
-  })
+  });
 
   // Show title with rainbow gradient
-  console.log(gradientString.rainbow(title))
+  console.log(gradientString.rainbow(title));
 
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
@@ -71,9 +76,9 @@ async function showWelcomeBanner() {
       borderColor: "cyan",
       backgroundColor: "#0a0a1e",
     }
-  )
+  );
 
-  console.log(welcomeMessage)
+  console.log(welcomeMessage);
 }
 
 // Enhanced command wrapper with loading animation
@@ -90,22 +95,22 @@ function createEnhancedCommand(
         text: chalk.cyan(`Executing ${name}...`),
         spinner: "dots12",
         color: "cyan",
-      }).start()
+      }).start();
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300)) // Brief delay for UX
-        spinner.stop()
-        console.log(chalk.green("✓"), chalk.bold(`${name} ready`))
-        await action(...args)
+        await new Promise((resolve) => setTimeout(resolve, 300)); // Brief delay for UX
+        spinner.stop();
+        console.log(chalk.green("✓"), chalk.bold(`${name} ready`));
+        await action(...args);
       } catch (error: any) {
-        spinner.stop()
+        spinner.stop();
 
         // Handle user cancellation gracefully
         if (
           error.name === "ExitPromptError" ||
           error.message?.includes("SIGINT")
         ) {
-          console.log("\n")
+          console.log("\n");
           console.log(
             boxen(
               chalk.yellow("⚠️ ") + chalk.white(`${name} cancelled by user`),
@@ -116,36 +121,36 @@ function createEnhancedCommand(
                 backgroundColor: "#1a1a00",
               }
             )
-          )
-          return
+          );
+          return;
         }
 
         // Handle other errors
-        spinner.fail(chalk.red(`Failed to execute ${name}`))
-        console.error(chalk.red("Error:"), error)
-        process.exit(1)
+        spinner.fail(chalk.red(`Failed to execute ${name}`));
+        console.error(chalk.red("Error:"), error);
+        process.exit(1);
       }
     },
-  }
+  };
 }
 
 // Enhanced error handling and beautiful exit
 process.on("SIGINT", () => {
   // Only handle SIGINT if we're not in the middle of a prompt
   if (!process.stdin.isTTY || process.stdin.readableEnded) {
-    console.log("\n")
+    console.log("\n");
     console.log(
       gradientString(
         "yellow",
         "orange"
       )("👋 Thanks for using DK! See you soon! ✨")
-    )
-    process.exit(0)
+    );
+    process.exit(0);
   }
-})
+});
 
 process.on("uncaughtException", (error) => {
-  console.log("\n")
+  console.log("\n");
   console.log(
     boxen(chalk.red("💥 Error: ") + chalk.white(error.message), {
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -153,44 +158,46 @@ process.on("uncaughtException", (error) => {
       borderColor: "red",
       backgroundColor: "#1a0000",
     })
-  )
-  process.exit(1)
-})
+  );
+  process.exit(1);
+});
 
 // Main execution function
 async function main() {
   // Register config upgrade command
-  const program = new Command()
+  const program = new Command();
 
   const configCmd = program
     .command("config")
-    .description(chalk.gray("Manage dk.config.json"))
+    .description(chalk.gray("Manage dk.config.json"));
 
   configCmd
     .command("update")
     .description(chalk.gray("Update dk.config.json to latest version"))
     .action(async () => {
-      await updateConfig()
-    })
+      await updateConfig();
+    });
   // Show banner only at the start
-  await showWelcomeBanner()
+  await showWelcomeBanner();
 
-  // Ensure dk.config.json exists before running any command except init/config
-  const isInitCmd = process.argv.includes("init")
-  const isConfigCmd = process.argv.includes("config")
+  // Check if dk.config.json exists and warn if missing
+  const isInitCmd = process.argv.includes("init");
+  const isConfigCmd = process.argv.includes("config");
   if (!configExists() && !isInitCmd && !isConfigCmd) {
-    ui.info("dk.config.json not found. Running init...")
-    await runInit()
+    ui.warning(
+      "dk.config.json not found.",
+      "Run 'dk init' to create configuration file."
+    );
   }
 
   // Check config version and warn if outdated
   if (configExists() && !isInitCmd && !isConfigCmd) {
-    const config = readConfig()
+    const config = readConfig();
     if (isConfigOutdated(config)) {
       ui.warning(
         "Your dk.config.json is outdated.",
         "Run 'dk config update' to update your config file."
-      )
+      );
     }
   }
 
@@ -207,7 +214,7 @@ async function main() {
       commandDescription: (cmd) => "  " + chalk.gray(cmd.description()),
       optionTerm: (option) => chalk.green("  " + option.flags),
       optionDescription: (option) => "  " + chalk.gray(option.description),
-    })
+    });
 
   program
     .command("init")
@@ -218,27 +225,31 @@ async function main() {
         "init",
         "Initializing configuration",
         runInit
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   program
     .command("clean")
     .alias("c")
     .description(chalk.gray("🧹 Clean temporary files"))
     .action(async (...args) => {
-      const cmd = createEnhancedCommand("clean", "Cleaning project", clean)
-      await cmd.execute(...args)
-    })
+      const cmd = createEnhancedCommand("clean", "Cleaning project", clean);
+      await cmd.execute(...args);
+    });
 
   program
     .command("doctor")
     .alias("dr")
     .description(chalk.gray("🩺 System health check"))
     .action(async (...args) => {
-      const cmd = createEnhancedCommand("doctor", "Running diagnostics", doctor)
-      await cmd.execute(...args)
-    })
+      const cmd = createEnhancedCommand(
+        "doctor",
+        "Running diagnostics",
+        doctor
+      );
+      await cmd.execute(...args);
+    });
 
   // Enhanced Deploy command with beautiful UI
   const deployCommand = program
@@ -260,7 +271,7 @@ async function main() {
               backgroundColor: "#0a0a1a",
             }
           )
-        )
+        );
 
         const { environment } = await inquirer.prompt({
           type: "list",
@@ -280,23 +291,23 @@ async function main() {
             },
           ],
           default: "dev",
-        })
+        });
 
         const spinner = ora({
           text: chalk.cyan(`Preparing ${environment} deployment...`),
           spinner: "dots12",
           color: "cyan",
-        }).start()
+        }).start();
 
-        await new Promise((resolve) => setTimeout(resolve, 800))
-        spinner.stop()
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        spinner.stop();
 
         if (environment === "dev") {
-          console.log(chalk.green("✓"), chalk.bold("Deploying to Development"))
-          await deployDev()
+          console.log(chalk.green("✓"), chalk.bold("Deploying to Development"));
+          await deployDev();
         } else {
-          console.log(chalk.red("✓"), chalk.bold("Deploying to Production"))
-          await deployProd()
+          console.log(chalk.red("✓"), chalk.bold("Deploying to Production"));
+          await deployProd();
         }
       } catch (error: any) {
         // Handle user cancellation gracefully
@@ -304,7 +315,7 @@ async function main() {
           error.name === "ExitPromptError" ||
           error.message?.includes("SIGINT")
         ) {
-          console.log("\n")
+          console.log("\n");
           console.log(
             boxen(
               chalk.yellow("⚠️ ") + chalk.white("Deployment cancelled by user"),
@@ -315,13 +326,13 @@ async function main() {
                 backgroundColor: "#1a1a00",
               }
             )
-          )
-          return
+          );
+          return;
         }
         // Re-throw other errors
-        throw error
+        throw error;
       }
-    })
+    });
 
   deployCommand
     .command("dev")
@@ -331,9 +342,9 @@ async function main() {
         "deploy dev",
         "Deploying to dev",
         deployDev
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   deployCommand
     .command("prod")
@@ -343,15 +354,15 @@ async function main() {
         "deploy prod",
         "Deploying to prod",
         deployProd
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   // React Native commands
   const rnCommand = program
     .command("rn")
     .alias("react-native")
-    .description(chalk.gray("📱 React Native tools"))
+    .description(chalk.gray("📱 React Native tools"));
 
   rnCommand
     .command("build")
@@ -371,7 +382,7 @@ async function main() {
               backgroundColor: "#0a1a0a",
             }
           )
-        )
+        );
 
         const { buildType } = await inquirer.prompt({
           type: "list",
@@ -409,16 +420,16 @@ async function main() {
             },
           ],
           default: "android-release",
-        })
+        });
 
         if (buildType === "android-release") {
-          await buildAndroidRelease()
+          await buildAndroidRelease();
         } else if (buildType === "android-release-no-clean") {
-          await buildAndroidRelease(true)
+          await buildAndroidRelease(true);
         } else if (buildType === "android-debug") {
-          await buildAndroidDebug()
+          await buildAndroidDebug();
         } else if (buildType === "android-debug-no-clean") {
-          await buildAndroidDebug(true)
+          await buildAndroidDebug(true);
         }
       } catch (error: any) {
         // Handle user cancellation gracefully
@@ -426,7 +437,7 @@ async function main() {
           error.name === "ExitPromptError" ||
           error.message?.includes("SIGINT")
         ) {
-          console.log("\n")
+          console.log("\n");
           console.log(
             boxen(
               chalk.yellow("⚠️ ") + chalk.white("Build cancelled by user"),
@@ -437,13 +448,13 @@ async function main() {
                 backgroundColor: "#1a1a00",
               }
             )
-          )
-          return
+          );
+          return;
         }
         // Re-throw other errors
-        throw error
+        throw error;
       }
-    })
+    });
 
   rnCommand
     .command("build release")
@@ -454,9 +465,9 @@ async function main() {
         "React Native build release",
         "Building Android release",
         buildAndroidRelease
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   rnCommand
     .command("build release --no-clean")
@@ -467,9 +478,9 @@ async function main() {
         "React Native build release (no clean)",
         "Building Android release without clean",
         () => buildAndroidRelease(true)
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   rnCommand
     .command("build debug")
@@ -480,9 +491,9 @@ async function main() {
         "React Native build debug",
         "Building Android debug",
         buildAndroidDebug
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   rnCommand
     .command("build debug --no-clean")
@@ -493,15 +504,15 @@ async function main() {
         "React Native build debug (no clean)",
         "Building Android debug without clean",
         () => buildAndroidDebug(true)
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   // Spring Boot commands
   const sbCommand = program
     .command("sb")
     .alias("spring-boot")
-    .description(chalk.gray("🍃 Spring Boot microservices tools"))
+    .description(chalk.gray("🍃 Spring Boot microservices tools"));
 
   sbCommand
     .command("start")
@@ -511,9 +522,9 @@ async function main() {
         "Spring Boot start",
         "Starting microservices",
         startSpringBootServices
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   program
     .command("gen")
@@ -524,9 +535,9 @@ async function main() {
         "Generators",
         "Running all generators",
         gen
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   program
     .command("commit")
@@ -536,13 +547,13 @@ async function main() {
         "Git auto commit",
         "Committing project-specific files",
         gitAutoCommit
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   const gitCommand = program
     .command("git")
-    .description(chalk.gray("🔧 Git configuration tools"))
+    .description(chalk.gray("🔧 Git configuration tools"));
 
   gitCommand
     .command("fix")
@@ -552,9 +563,9 @@ async function main() {
         "Git configuration fix",
         "Fixing git ignorecase settings",
         gitFix
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   gitCommand
     .command("ac")
@@ -564,9 +575,9 @@ async function main() {
         "Git add & commit",
         "Staging and committing changes",
         gitAddCommit
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   gitCommand
     .command("acp")
@@ -576,9 +587,9 @@ async function main() {
         "Git add, commit & push",
         "Staging, committing, and pushing changes",
         gitAddCommitPush
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   gitCommand
     .command("commit")
@@ -588,14 +599,14 @@ async function main() {
         "Git auto commit",
         "Committing project-specific files",
         gitAutoCommit
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   // Database commands (only for node-express projects)
   const dbCommand = program
     .command("db")
-    .description(chalk.gray("🗃️ Database management tools"))
+    .description(chalk.gray("🗃️ Database management tools"));
 
   dbCommand
     .command("status")
@@ -605,14 +616,14 @@ async function main() {
         "Database status check",
         "Checking database connectivity",
         dbStatus
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   // Database dump commands
   const dumpCommand = dbCommand
     .command("dump")
-    .description(chalk.gray("💾 Database backup operations"))
+    .description(chalk.gray("💾 Database backup operations"));
 
   dumpCommand
     .command("create")
@@ -622,9 +633,9 @@ async function main() {
         "Database dump create",
         "Creating database backup",
         dbDumpCreate
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   dumpCommand
     .command("apply [version]")
@@ -634,14 +645,14 @@ async function main() {
         "Database dump apply",
         "Applying database dump",
         dbDumpApply
-      )
-      await cmd.execute({ version }, ...args)
-    })
+      );
+      await cmd.execute({ version }, ...args);
+    });
 
   // Database drop commands
   const dropCommand = dbCommand
     .command("drop")
-    .description(chalk.gray("🗑️ Database destructive operations"))
+    .description(chalk.gray("🗑️ Database destructive operations"));
 
   dropCommand
     .command("all-tables")
@@ -652,13 +663,13 @@ async function main() {
         "Database drop all tables",
         "Dropping all database tables",
         dbDropAllTables
-      )
-      await cmd.execute(...args)
-    })
+      );
+      await cmd.execute(...args);
+    });
 
   // Add help enhancement
   program.on("--help", () => {
-    console.log("\n")
+    console.log("\n");
     console.log(
       boxen(
         gradientString("blue", "cyan")("💡 Pro Tips") +
@@ -710,10 +721,10 @@ async function main() {
           backgroundColor: "#0a0a1a",
         }
       )
-    )
-  })
+    );
+  });
 
-  program.parse(process.argv)
+  program.parse(process.argv);
 
   // Show help if no command provided
   if (!process.argv.slice(2).length) {
@@ -731,9 +742,9 @@ async function main() {
           backgroundColor: "#0a0a1a",
         }
       )
-    )
+    );
   }
 }
 
 // Run the main function
-main().catch(console.error)
+main().catch(console.error);
