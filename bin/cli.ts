@@ -755,19 +755,240 @@ async function main() {
     );
   });
 
-  program.parse(process.argv);
-
-  // Show help if no command provided
+  // Show interactive menu if no command provided
   if (!process.argv.slice(2).length) {
-    console.log(
-      createBox(
-        chalk.blue("ℹ️ ") +
-          chalk.white("Run ") +
-          chalk.cyan("dk --help") +
-          chalk.white(" for commands"),
-        "blue"
-      )
-    );
+    await showInteractiveMenu(projectMode);
+    return;
+  }
+
+  program.parse(process.argv);
+}
+
+// Interactive menu when no command is provided
+async function showInteractiveMenu(projectMode: boolean) {
+  const standaloneCommands = [
+    {
+      name: "1. 🚀 Init - Initialize project configuration",
+      value: "init",
+      command: "init",
+    },
+    {
+      name: "2. 🩺 Doctor - System health check",
+      value: "doctor",
+      command: "doctor",
+    },
+    {
+      name: "3. 🔧 Git Fix - Fix git configuration",
+      value: "git:fix",
+      command: "git fix",
+    },
+    {
+      name: "4. 📝 Git Add & Commit - Stage and commit",
+      value: "git:ac",
+      command: "git ac",
+    },
+    {
+      name: "5. 🚀 Git Add, Commit & Push",
+      value: "git:acp",
+      command: "git acp",
+    },
+    {
+      name: "6. ❓ Help - Show all commands",
+      value: "help",
+      command: "--help",
+    },
+    { name: "7. ❌ Exit", value: "exit", command: null },
+  ];
+
+  const projectCommands = [
+    {
+      name: "1. 🧹 Clean - Clean temporary files",
+      value: "clean",
+      command: "clean",
+    },
+    {
+      name: "2. 🚀 Deploy - Deploy application",
+      value: "deploy",
+      command: "deploy",
+    },
+    {
+      name: "3. 📱 React Native Build",
+      value: "rn:build",
+      command: "rn build",
+    },
+    {
+      name: "4. 🍃 Spring Boot - Start services",
+      value: "sb:start",
+      command: "sb start",
+    },
+    { name: "5. ⚡ Generators - Run generators", value: "gen", command: "gen" },
+    {
+      name: "6. 🔄 Commit - Auto-commit files",
+      value: "commit",
+      command: "commit",
+    },
+    { name: "7. 🗃️ Database Status", value: "db:status", command: "db status" },
+    {
+      name: "8. 💾 Database Dump",
+      value: "db:dump",
+      command: "db dump create",
+    },
+    {
+      name: "9. 🩺 Doctor - System health check",
+      value: "doctor",
+      command: "doctor",
+    },
+    { name: "10. 📝 Git Add & Commit", value: "git:ac", command: "git ac" },
+    {
+      name: "11. 🚀 Git Add, Commit & Push",
+      value: "git:acp",
+      command: "git acp",
+    },
+    {
+      name: "12. ❓ Help - Show all commands",
+      value: "help",
+      command: "--help",
+    },
+    { name: "13. ❌ Exit", value: "exit", command: null },
+  ];
+
+  const choices = projectMode ? projectCommands : standaloneCommands;
+
+  try {
+    const { selectedCommand } = await inquirer.prompt({
+      type: "list",
+      name: "selectedCommand",
+      message: chalk.bold("🎯 Select a command to run:"),
+      choices,
+      pageSize: 15,
+      loop: false,
+    });
+
+    if (selectedCommand === "exit") {
+      console.log(
+        gradientString(
+          "yellow",
+          "orange"
+        )("👋 Thanks for using DK! See you soon! ✨")
+      );
+      process.exit(0);
+    }
+
+    const selected = choices.find((c) => c.value === selectedCommand);
+    if (selected && selected.command) {
+      console.log(chalk.cyan(`\n▶ Running: dk ${selected.command}\n`));
+      await executeCommand(selected.command, projectMode);
+    }
+  } catch (error: any) {
+    if (isCancellationError(error)) {
+      console.log(
+        gradientString(
+          "yellow",
+          "orange"
+        )("\n👋 Thanks for using DK! See you soon! ✨")
+      );
+      process.exit(0);
+    }
+    throw error;
+  }
+}
+
+// Execute the selected command directly
+async function executeCommand(commandStr: string, projectMode: boolean) {
+  const parts = commandStr.split(" ");
+  const mainCmd = parts[0];
+  const subCmd = parts[1];
+
+  switch (mainCmd) {
+    case "init":
+      await runInit();
+      break;
+    case "clean":
+      if (!projectMode) showProjectModeRequired();
+      await clean();
+      break;
+    case "doctor":
+      await doctor();
+      break;
+    case "deploy":
+      if (!projectMode) showProjectModeRequired();
+      // Show deploy menu
+      const { environment } = await inquirer.prompt({
+        type: "list",
+        name: "environment",
+        message: chalk.bold("🎯 Select environment:"),
+        choices: [
+          {
+            name: chalk.green("🔧 Development") + chalk.gray(" (quick deploy)"),
+            value: "dev",
+          },
+          {
+            name: chalk.red("🏭 Production") + chalk.gray(" (full pipeline)"),
+            value: "prod",
+          },
+        ],
+      });
+      if (environment === "dev") await deployDev();
+      else await deployProd();
+      break;
+    case "rn":
+      if (!projectMode) showProjectModeRequired();
+      // Show RN build menu
+      const { buildType } = await inquirer.prompt({
+        type: "list",
+        name: "buildType",
+        message: chalk.bold("🎯 Select build type:"),
+        choices: [
+          {
+            name: chalk.green("🤖 Android Release (with clean)"),
+            value: "release",
+          },
+          {
+            name: chalk.green("🤖 Android Release (skip clean)"),
+            value: "release-nc",
+          },
+          {
+            name: chalk.yellow("🔧 Android Debug (with clean)"),
+            value: "debug",
+          },
+          {
+            name: chalk.yellow("🔧 Android Debug (skip clean)"),
+            value: "debug-nc",
+          },
+        ],
+      });
+      if (buildType === "release") await buildAndroidRelease();
+      else if (buildType === "release-nc") await buildAndroidRelease(true);
+      else if (buildType === "debug") await buildAndroidDebug();
+      else if (buildType === "debug-nc") await buildAndroidDebug(true);
+      break;
+    case "sb":
+      if (!projectMode) showProjectModeRequired();
+      await startSpringBootServices();
+      break;
+    case "gen":
+      if (!projectMode) showProjectModeRequired();
+      await gen();
+      break;
+    case "commit":
+      if (!projectMode) showProjectModeRequired();
+      await gitAutoCommit();
+      break;
+    case "git":
+      if (subCmd === "fix") await gitFix();
+      else if (subCmd === "ac") await gitAddCommit();
+      else if (subCmd === "acp") await gitAddCommitPush();
+      break;
+    case "db":
+      if (!projectMode) showProjectModeRequired();
+      if (subCmd === "status") await dbStatus();
+      else if (parts[1] === "dump" && parts[2] === "create")
+        await dbDumpCreate();
+      break;
+    case "--help":
+      process.argv = ["node", "dk", "--help"];
+      await main();
+      break;
   }
 }
 
