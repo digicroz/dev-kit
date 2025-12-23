@@ -103,7 +103,7 @@ const runGradleClean = (platform: "android" | "ios") =>
       const child = spawn(cmd, ["clean"], {
         cwd: "android",
         stdio: "ignore",
-        shell: false,
+        shell: true, // Must be true on Windows to execute .bat files
       })
       child.on("close", () => resolveDone())
       child.on("error", () => resolveDone())
