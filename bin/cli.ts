@@ -37,6 +37,12 @@ import {
   dbDumpApply,
   dbDropAllTables,
 } from "../src/commands/database.js";
+import {
+  workspace,
+  workspaceInit,
+  workspaceConfig,
+  workspaceList,
+} from "../src/commands/workspace.js";
 
 // Get package.json version
 const __filename = fileURLToPath(import.meta.url);
@@ -295,6 +301,58 @@ async function main() {
       );
       await cmd.execute(...args);
     });
+
+  // Workspace commands
+  const workspaceCommand = program
+    .command("workspace")
+    .alias("ws")
+    .description(chalk.gray("💼 Manage workspaces and modules"));
+
+  workspaceCommand
+    .command("init")
+    .description(chalk.gray("🚀 Initialize workspace configuration"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "Workspace init",
+        "Initializing workspace configuration",
+        workspaceInit
+      );
+      await cmd.execute(...args);
+    });
+
+  workspaceCommand
+    .command("config")
+    .description(chalk.gray("⚙️ Open workspace config in VS Code"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "Workspace config",
+        "Opening workspace configuration",
+        workspaceConfig
+      );
+      await cmd.execute(...args);
+    });
+
+  workspaceCommand
+    .command("list")
+    .description(chalk.gray("📋 List all workspaces"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "Workspace list",
+        "Listing workspaces",
+        workspaceList
+      );
+      await cmd.execute(...args);
+    });
+
+  // Default workspace action (interactive selector)
+  workspaceCommand.action(async (...args) => {
+    const cmd = createEnhancedCommand(
+      "Workspace",
+      "Opening workspace selector",
+      workspace
+    );
+    await cmd.execute(...args);
+  });
 
   // Enhanced Deploy command with beautiful UI
   const deployCommand = program
@@ -762,31 +820,36 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: "init",
     },
     {
-      name: "2. 🩺 Doctor - System health check",
+      name: "2. 💼 Workspace - Manage workspaces",
+      value: "workspace",
+      command: "workspace",
+    },
+    {
+      name: "3. 🩺 Doctor - System health check",
       value: "doctor",
       command: "doctor",
     },
     {
-      name: "3. 🔧 Git Fix - Fix git configuration",
+      name: "4. 🔧 Git Fix - Fix git configuration",
       value: "git:fix",
       command: "git fix",
     },
     {
-      name: "4. 📝 Git Add & Commit - Stage and commit",
+      name: "5. 📝 Git Add & Commit - Stage and commit",
       value: "git:ac",
       command: "git ac",
     },
     {
-      name: "5. 🚀 Git Add, Commit & Push",
+      name: "6. 🚀 Git Add, Commit & Push",
       value: "git:acp",
       command: "git acp",
     },
     {
-      name: "6. ❓ Help - Show all commands",
+      name: "7. ❓ Help - Show all commands",
       value: "help",
       command: "--help",
     },
-    { name: "7. ❌ Exit", value: "exit", command: null },
+    { name: "8. ❌ Exit", value: "exit", command: null },
   ];
 
   const projectCommands = [
@@ -898,6 +961,9 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
       break;
     case "doctor":
       await doctor();
+      break;
+    case "workspace":
+      await workspace();
       break;
     case "deploy":
       if (!projectMode) showProjectModeRequired();

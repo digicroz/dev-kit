@@ -1,0 +1,112 @@
+{
+  "version": "1.0.0",
+  "workspaces": [
+    {
+      "name": "Full Stack Project",
+      "description": "Frontend, Backend, and Database",
+      "color": "cyan",
+      "modules": [
+        {
+          "name": "Frontend",
+          "isIncludeByDefault": true,
+          "path": "C:/projects/myapp/frontend",
+          "defaultActionIndex": 0,
+          "actions": [
+            {
+              "type": "open-in-vscode",
+              "description": "Open in VS Code"
+            },
+            {
+              "type": "run-command",
+              "command": "npm install",
+              "description": "Install dependencies"
+            },
+            {
+              "type": "run-command",
+              "command": "npm start",
+              "description": "Start dev server"
+            }
+          ]
+        },
+        {
+          "name": "Backend",
+          "isIncludeByDefault": true,
+          "path": "C:/projects/myapp/backend",
+          "defaultActionIndex": 0,
+          "actions": [
+            {
+              "type": "open-in-vscode"
+            },
+            {
+              "type": "run-command",
+              "command": "git pull"
+            },
+            {
+              "type": "run-command",
+              "command": "npm install"
+            }
+          ]
+        },
+        {
+          "name": "Database Scripts",
+          "isIncludeByDefault": false,
+          "path": "C:/projects/myapp/database",
+          "defaultActionIndex": 0,
+          "actions": [
+            {
+              "type": "open-folder"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Microservices Project",
+      "description": "Multiple Spring Boot services",
+      "color": "green",
+      "modules": [
+        {
+          "name": "Auth Service",
+          "isIncludeByDefault": true,
+          "path": "C:/projects/microservices/auth-service",
+          "defaultActionIndex": 0,
+          "actions": [
+            {
+              "type": "open-in-vscode"
+            },
+            {
+              "type": "run-command",
+              "command": "git status"
+            }
+          ]
+        },
+        {
+          "name": "User Service",
+          "isIncludeByDefault": true,
+          "path": "C:/projects/microservices/user-service",
+          "defaultActionIndex": 0,
+          "actions": [
+            {
+              "type": "open-in-vscode"
+            }
+          ]
+        },
+        {
+          "name": "Gateway",
+          "isIncludeByDefault": true,
+          "path": "C:/projects/microservices/gateway",
+          "defaultActionIndex": 0,
+          "actions": [
+            {
+              "type": "open-in-vscode"
+            },
+            {
+              "type": "open-url",
+              "url": "http://localhost:8080"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
