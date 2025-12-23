@@ -81,16 +81,55 @@ async function showWelcomeBanner() {
   console.log(welcomeMessage);
 }
 
+// Check if command requires project mode
+function requiresProjectMode(commandName: string): boolean {
+  const projectModeCommands = [
+    "clean",
+    "deploy",
+    "rn",
+    "react-native",
+    "sb",
+    "spring-boot",
+    "gen",
+    "commit",
+    "db",
+  ];
+  return projectModeCommands.some((cmd) => commandName.includes(cmd));
+}
+
 // Enhanced command wrapper with loading animation
 function createEnhancedCommand(
   name: string,
   description: string,
-  action: Function
+  action: Function,
+  requiresProject: boolean = false
 ) {
   return {
     name,
     description: chalk.gray(description),
     async execute(...args: any[]) {
+      // Check if command requires project mode
+      if (requiresProject && !configExists()) {
+        console.log("\n");
+        console.log(
+          boxen(
+            chalk.red("⚠️ Project Mode Required") +
+              "\n" +
+              chalk.gray("This command requires dk.config.json") +
+              "\n" +
+              chalk.cyan("Run 'dk init' to create project configuration"),
+            {
+              padding: { top: 0, bottom: 0, left: 1, right: 1 },
+              margin: { top: 1, bottom: 1, left: 0, right: 0 },
+              borderStyle: "round",
+              borderColor: "red",
+              backgroundColor: "#1a0000",
+            }
+          )
+        );
+        process.exit(1);
+      }
+
       const spinner = ora({
         text: chalk.cyan(`Executing ${name}...`),
         spinner: "dots12",
@@ -167,6 +206,10 @@ async function main() {
   // Register config upgrade command
   const program = new Command();
 
+  // Detect mode: Project Mode or Standalone Mode
+  const projectMode = configExists();
+  const mode = projectMode ? "Project Mode" : "Standalone Mode";
+
   const configCmd = program
     .command("config")
     .description(chalk.gray("Manage dk.config.json"));
@@ -180,18 +223,30 @@ async function main() {
   // Show banner only at the start
   await showWelcomeBanner();
 
-  // Check if dk.config.json exists and warn if missing
-  const isInitCmd = process.argv.includes("init");
-  const isConfigCmd = process.argv.includes("config");
-  if (!configExists() && !isInitCmd && !isConfigCmd) {
-    ui.warning(
-      "dk.config.json not found.",
-      "Run 'dk init' to create configuration file."
-    );
-  }
+  // Display current mode
+  const modeColor = projectMode ? "green" : "yellow";
+  const modeIcon = projectMode ? "📁" : "⚡";
+  console.log(
+    boxen(
+      chalk[modeColor](`${modeIcon} ${mode}`) +
+        "\n" +
+        chalk.gray(
+          projectMode
+            ? "Running with project configuration"
+            : "Running in standalone mode - some commands require 'dk init'"
+        ),
+      {
+        padding: { top: 0, bottom: 0, left: 1, right: 1 },
+        margin: { top: 0, bottom: 1, left: 0, right: 0 },
+        borderStyle: "round",
+        borderColor: modeColor,
+        backgroundColor: projectMode ? "#0a1a0a" : "#1a1a00",
+      }
+    )
+  );
 
-  // Check config version and warn if outdated
-  if (configExists() && !isInitCmd && !isConfigCmd) {
+  // Check config version and warn if outdated (only in project mode)
+  if (projectMode) {
     const config = readConfig();
     if (isConfigOutdated(config)) {
       ui.warning(
@@ -234,7 +289,12 @@ async function main() {
     .alias("c")
     .description(chalk.gray("🧹 Clean temporary files"))
     .action(async (...args) => {
-      const cmd = createEnhancedCommand("clean", "Cleaning project", clean);
+      const cmd = createEnhancedCommand(
+        "clean",
+        "Cleaning project",
+        clean,
+        true
+      );
       await cmd.execute(...args);
     });
 
@@ -257,6 +317,28 @@ async function main() {
     .alias("d")
     .description(chalk.gray("🚀 Deploy with confidence"))
     .action(async () => {
+      // Check if command requires project mode
+      if (!configExists()) {
+        console.log("\n");
+        console.log(
+          boxen(
+            chalk.red("⚠️ Project Mode Required") +
+              "\n" +
+              chalk.gray("This command requires dk.config.json") +
+              "\n" +
+              chalk.cyan("Run 'dk init' to create project configuration"),
+            {
+              padding: { top: 0, bottom: 0, left: 1, right: 1 },
+              margin: { top: 1, bottom: 1, left: 0, right: 0 },
+              borderStyle: "round",
+              borderColor: "red",
+              backgroundColor: "#1a0000",
+            }
+          )
+        );
+        process.exit(1);
+      }
+
       try {
         console.log(
           boxen(
@@ -341,7 +423,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "deploy dev",
         "Deploying to dev",
-        deployDev
+        deployDev,
+        true
       );
       await cmd.execute(...args);
     });
@@ -353,7 +436,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "deploy prod",
         "Deploying to prod",
-        deployProd
+        deployProd,
+        true
       );
       await cmd.execute(...args);
     });
@@ -368,6 +452,28 @@ async function main() {
     .command("build")
     .description(chalk.gray("🔨 Build React Native app"))
     .action(async () => {
+      // Check if command requires project mode
+      if (!configExists()) {
+        console.log("\n");
+        console.log(
+          boxen(
+            chalk.red("⚠️ Project Mode Required") +
+              "\n" +
+              chalk.gray("This command requires dk.config.json") +
+              "\n" +
+              chalk.cyan("Run 'dk init' to create project configuration"),
+            {
+              padding: { top: 0, bottom: 0, left: 1, right: 1 },
+              margin: { top: 1, bottom: 1, left: 0, right: 0 },
+              borderStyle: "round",
+              borderColor: "red",
+              backgroundColor: "#1a0000",
+            }
+          )
+        );
+        process.exit(1);
+      }
+
       try {
         console.log(
           boxen(
@@ -464,7 +570,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "React Native build release",
         "Building Android release",
-        buildAndroidRelease
+        buildAndroidRelease,
+        true
       );
       await cmd.execute(...args);
     });
@@ -477,7 +584,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "React Native build release (no clean)",
         "Building Android release without clean",
-        () => buildAndroidRelease(true)
+        () => buildAndroidRelease(true),
+        true
       );
       await cmd.execute(...args);
     });
@@ -490,7 +598,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "React Native build debug",
         "Building Android debug",
-        buildAndroidDebug
+        buildAndroidDebug,
+        true
       );
       await cmd.execute(...args);
     });
@@ -503,7 +612,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "React Native build debug (no clean)",
         "Building Android debug without clean",
-        () => buildAndroidDebug(true)
+        () => buildAndroidDebug(true),
+        true
       );
       await cmd.execute(...args);
     });
@@ -521,7 +631,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Spring Boot start",
         "Starting microservices",
-        startSpringBootServices
+        startSpringBootServices,
+        true
       );
       await cmd.execute(...args);
     });
@@ -534,7 +645,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Generators",
         "Running all generators",
-        gen
+        gen,
+        true
       );
       await cmd.execute(...args);
     });
@@ -546,7 +658,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Git auto commit",
         "Committing project-specific files",
-        gitAutoCommit
+        gitAutoCommit,
+        true
       );
       await cmd.execute(...args);
     });
@@ -598,7 +711,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Git auto commit",
         "Committing project-specific files",
-        gitAutoCommit
+        gitAutoCommit,
+        true
       );
       await cmd.execute(...args);
     });
@@ -615,7 +729,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Database status check",
         "Checking database connectivity",
-        dbStatus
+        dbStatus,
+        true
       );
       await cmd.execute(...args);
     });
@@ -632,7 +747,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Database dump create",
         "Creating database backup",
-        dbDumpCreate
+        dbDumpCreate,
+        true
       );
       await cmd.execute(...args);
     });
@@ -644,7 +760,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Database dump apply",
         "Applying database dump",
-        dbDumpApply
+        dbDumpApply,
+        true
       );
       await cmd.execute({ version }, ...args);
     });
@@ -662,7 +779,8 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Database drop all tables",
         "Dropping all database tables",
-        dbDropAllTables
+        dbDropAllTables,
+        true
       );
       await cmd.execute(...args);
     });
