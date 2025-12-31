@@ -146,6 +146,18 @@ async function executeAction(
       }
       break;
 
+    case "open-in-antigravity":
+      console.log(chalk.gray(`  → Opening ${moduleName} in Antigravity...`));
+      try {
+        await execAsync(`antigravity "${modulePath}"`);
+        console.log(chalk.green(`  ✓ Opened ${moduleName} in Antigravity`));
+      } catch (error: any) {
+        console.log(
+          chalk.red(`  ✗ Failed to open in Antigravity: ${error.message}`)
+        );
+      }
+      break;
+
     case "run-command":
       if (!action.command) {
         console.log(chalk.red(`  ✗ No command specified for ${moduleName}`));
