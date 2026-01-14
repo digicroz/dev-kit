@@ -451,8 +451,8 @@ export const gitAutoCommit = async () => {
   switch (projectType) {
     case "node-express":
       ui.info("Project type", "node-express")
-      addArgs = ["add", "./prisma/*"]
-      commitMessage = "prisma changes"
+      addArgs = ["add", "./prisma/*", "./src/_s2s/*"]
+      commitMessage = "prisma and s2s changes"
       break
 
     case "vite-react":
