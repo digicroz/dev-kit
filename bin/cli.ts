@@ -23,7 +23,7 @@ import {
 } from "../src/utils/config.js";
 import { init as runInit } from "../src/commands/init.js";
 import { updateConfig } from "../src/commands/config.js";
-import { startSpringBootServices } from "../src/commands/springBoot.js";
+import { startSpringBootServices, buildSpringBootServices } from "../src/commands/springBoot.js";
 import { gen } from "../src/commands/gen.js";
 import {
   gitFix,
@@ -600,6 +600,19 @@ async function main() {
         true
       );
       await cmd.execute(...args);
+    });
+
+  sbCommand
+    .command("build")
+    .description(chalk.gray("🏗️  Build all Spring Boot services"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "Spring Boot build",
+        "Building microservices",
+        buildSpringBootServices,
+        true
+      )
+      await cmd.execute(...args)
     });
 
   program

@@ -173,3 +173,125 @@ async function startService(
     }, 60000)
   })
 }
+
+
+export async function buildSpringBootServices() {
+  if (!configExists()) {
+    ui.error("dk.config.json not found. Run 'dk init' first.")
+    return
+  }
+
+  const config = readConfig()
+  if (!config || config.projectType !== "spring-boot-microservice") {
+    ui.error(
+      "This command is only available for Spring Boot microservice projects."
+    )
+    return
+  }
+
+  if (!config.springBoot?.services || config.springBoot.services.length === 0) {
+    ui.error(
+      "No Spring Boot services configured. Run 'dk init' to configure services."
+    )
+    return
+  }
+
+  const buildOutDir = config.springBoot.buildOutDir
+  if (!buildOutDir) {
+    ui.error(
+      "buildOutDir is not configured in springBoot section of dk.config.json"
+    )
+    return
+  }
+
+  const absoluteBuildOutDir = join(process.cwd(), buildOutDir)
+  if (!existsSync(absoluteBuildOutDir)) {
+    ui.info(`Creating build output directory: ${absoluteBuildOutDir}`)
+    const fs = await import("fs")
+    fs.mkdirSync(absoluteBuildOutDir, { recursive: true })
+  }
+
+  ui.info("Building Spring Boot microservices...")
+
+  const glob = (await import("fast-glob")).default
+  const fs = await import("fs")
+
+  for (const service of config.springBoot.services) {
+    await buildService(service, absoluteBuildOutDir, glob, fs)
+  }
+
+  ui.success("All services built and artifacts moved successfully!")
+}
+
+async function buildService(
+  service: SpringBootService,
+  buildOutDir: string,
+  glob: any,
+  fs: any
+): Promise<void> {
+  const servicePath = join(process.cwd(), service.path)
+
+  if (!existsSync(servicePath)) {
+    ui.error(`Service directory not found: ${servicePath}`)
+    return
+  }
+
+  ui.info(`Building ${service.name}...`)
+
+  const mvnwName = process.platform === "win32" ? "mvnw.cmd" : "mvnw"
+  const mvnwFullPath = join(servicePath, mvnwName)
+
+  let command = "mvn"
+  
+  if (existsSync(mvnwFullPath)) {
+    command = process.platform === "win32" ? mvnwFullPath : `./${mvnwName}`
+  }
+
+  return new Promise((resolve, reject) => {
+    const args = ["clean", "install"]
+
+    const childProcess = spawn(command, args, {
+      cwd: servicePath,
+      stdio: "inherit",
+      shell: true,
+    })
+
+    childProcess.on("exit", async (code) => {
+      if (code !== 0) {
+        ui.error(`Build failed for ${service.name} with code ${code}`)
+        reject(new Error(`Build failed for ${service.name}`))
+        return
+      }
+
+      const targetDir = join(servicePath, "target")
+      if (!existsSync(targetDir)) {
+          ui.error(`Target directory not found for ${service.name}`)
+          reject(new Error(`Target directory missing`))
+          return
+      }
+
+      const jarFiles = await glob("*.jar", { cwd: targetDir, absolute: true })
+      
+      const jarFile =
+        jarFiles.find((f: string) => !f.includes("original-")) || jarFiles[0]
+
+      if (!jarFile) {
+        ui.error(`No jar file found in ${targetDir} for ${service.name}`)
+        reject(new Error(`No jar file found for ${service.name}`))
+        return
+      }
+
+      const destPath = join(buildOutDir, `${service.name}.jar`)
+      
+      fs.copyFileSync(jarFile, destPath)
+      resolve()
+    })
+
+    childProcess.on("error", (err) => {
+      ui.error(
+        `Failed to start build process for ${service.name}: ${err.message}`
+      )
+      reject(err)
+    })
+  })
+}

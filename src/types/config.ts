@@ -23,6 +23,7 @@ export interface SpringBootService {
 
 export interface SpringBootConfig {
   services: SpringBootService[]
+  buildOutDir?: string
 }
 
 export interface AssetGeneratorConfig {
