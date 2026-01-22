@@ -59,11 +59,11 @@ async function showWelcomeBanner() {
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
     gradientString("cyan", "blue")("🚀 Development Kit") +
-      chalk.gray(" v" + version) +
-      "\n" +
-      chalk.cyan("━".repeat(20)) +
-      "\n" +
-      chalk.white("Fast • Beautiful • Modern ⚡"),
+    chalk.gray(" v" + version) +
+    "\n" +
+    chalk.cyan("━".repeat(20)) +
+    "\n" +
+    chalk.white("Fast • Beautiful • Modern ⚡"),
     {
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
       margin: { top: 0, bottom: 1, left: 0, right: 0 },
@@ -97,10 +97,10 @@ function showProjectModeRequired() {
   console.log(
     createBox(
       chalk.red("⚠️ Project Mode Required") +
-        "\n" +
-        chalk.gray("This command requires dk.config.json") +
-        "\n" +
-        chalk.cyan("Run 'dk init' to create project configuration"),
+      "\n" +
+      chalk.gray("This command requires dk.config.json") +
+      "\n" +
+      chalk.cyan("Run 'dk init' to create project configuration"),
       "red",
       "#1a0000"
     )
@@ -225,12 +225,12 @@ async function main() {
   console.log(
     createBox(
       chalk[modeColor](`${modeIcon} ${mode}`) +
-        "\n" +
-        chalk.gray(
-          projectMode
-            ? "Running with project configuration"
-            : "Running in standalone mode - some commands require 'dk init'"
-        ),
+      "\n" +
+      chalk.gray(
+        projectMode
+          ? "Running with project configuration"
+          : "Running in standalone mode - some commands require 'dk init'"
+      ),
       modeColor,
       projectMode ? "#0a1a0a" : "#1a1a00"
     )
@@ -368,8 +368,8 @@ async function main() {
         console.log(
           createBox(
             gradientString("magenta", "cyan")("🚀 Deployment Center") +
-              "\n" +
-              chalk.gray("Choose your destination"),
+            "\n" +
+            chalk.gray("Choose your destination"),
             "magenta",
             "#0a0a1a"
           )
@@ -464,8 +464,8 @@ async function main() {
         console.log(
           createBox(
             gradientString("green", "blue")("📱 React Native Build Center") +
-              "\n" +
-              chalk.gray("Choose your build target"),
+            "\n" +
+            chalk.gray("Choose your build target"),
             "green",
             "#0a1a0a"
           )
@@ -603,13 +603,13 @@ async function main() {
     });
 
   sbCommand
-    .command("build")
+    .command("build [mode]")
     .description(chalk.gray("🏗️  Build all Spring Boot services"))
-    .action(async (...args) => {
+    .action(async (mode, ...args) => {
       const cmd = createEnhancedCommand(
         "Spring Boot build",
         "Building microservices",
-        buildSpringBootServices,
+        () => buildSpringBootServices(mode),
         true
       )
       await cmd.execute(...args)
@@ -769,47 +769,47 @@ async function main() {
     console.log(
       createBox(
         gradientString("blue", "cyan")("💡 Pro Tips") +
-          "\n" +
-          chalk.gray("• Quick: ") +
-          chalk.cyan("dk c") +
-          chalk.gray(", ") +
-          chalk.cyan("dk dr") +
-          "\n" +
-          chalk.gray("• Deploy: ") +
-          chalk.cyan("dk d dev") +
-          "\n" +
-          chalk.gray("• RN Release: ") +
-          chalk.cyan("dk rn br") +
-          "\n" +
-          chalk.gray("• RN Debug: ") +
-          chalk.cyan("dk rn bd") +
-          "\n" +
-          chalk.gray("• No Clean: ") +
-          chalk.cyan("dk rn brnc") +
-          "\n" +
-          chalk.gray("• Spring Boot: ") +
-          chalk.cyan("dk sb start") +
-          "\n" +
-          chalk.gray("• Generators: ") +
-          chalk.cyan("dk gen") +
-          "\n" +
-          chalk.gray("• Git Fix: ") +
-          chalk.cyan("dk git fix") +
-          "\n" +
-          chalk.gray("• Git Add & Commit: ") +
-          chalk.cyan("dk git ac") +
-          "\n" +
-          chalk.gray("• Git Add, Commit & Push: ") +
-          chalk.cyan("dk git acp") +
-          "\n" +
-          chalk.gray("• DB Status: ") +
-          chalk.cyan("dk db status") +
-          "\n" +
-          chalk.gray("• DB Dump: ") +
-          chalk.cyan("dk db dump create") +
-          "\n" +
-          chalk.gray("• Help: ") +
-          chalk.cyan("dk --help"),
+        "\n" +
+        chalk.gray("• Quick: ") +
+        chalk.cyan("dk c") +
+        chalk.gray(", ") +
+        chalk.cyan("dk dr") +
+        "\n" +
+        chalk.gray("• Deploy: ") +
+        chalk.cyan("dk d dev") +
+        "\n" +
+        chalk.gray("• RN Release: ") +
+        chalk.cyan("dk rn br") +
+        "\n" +
+        chalk.gray("• RN Debug: ") +
+        chalk.cyan("dk rn bd") +
+        "\n" +
+        chalk.gray("• No Clean: ") +
+        chalk.cyan("dk rn brnc") +
+        "\n" +
+        chalk.gray("• Spring Boot: ") +
+        chalk.cyan("dk sb start") +
+        "\n" +
+        chalk.gray("• Generators: ") +
+        chalk.cyan("dk gen") +
+        "\n" +
+        chalk.gray("• Git Fix: ") +
+        chalk.cyan("dk git fix") +
+        "\n" +
+        chalk.gray("• Git Add & Commit: ") +
+        chalk.cyan("dk git ac") +
+        "\n" +
+        chalk.gray("• Git Add, Commit & Push: ") +
+        chalk.cyan("dk git acp") +
+        "\n" +
+        chalk.gray("• DB Status: ") +
+        chalk.cyan("dk db status") +
+        "\n" +
+        chalk.gray("• DB Dump: ") +
+        chalk.cyan("dk db dump create") +
+        "\n" +
+        chalk.gray("• Help: ") +
+        chalk.cyan("dk --help"),
         "blue"
       )
     );

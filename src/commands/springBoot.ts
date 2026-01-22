@@ -1,6 +1,7 @@
 import { spawn, ChildProcess } from "child_process"
 import { join } from "path"
 import { existsSync } from "fs"
+import inquirer from "inquirer"
 import { ui } from "../utils/ui-helpers"
 import { readConfig, configExists } from "../utils/config"
 import type { SpringBootService } from "../types/config"
@@ -63,7 +64,7 @@ export async function startSpringBootServices() {
     })
 
     // Keep the process alive
-    await new Promise(() => {})
+    await new Promise(() => { })
   } catch (error: any) {
     ui.error("Failed to start services:", error.message)
 
@@ -175,7 +176,7 @@ async function startService(
 }
 
 
-export async function buildSpringBootServices() {
+export async function buildSpringBootServices(mode?: string) {
   if (!configExists()) {
     ui.error("dk.config.json not found. Run 'dk init' first.")
     return
@@ -216,7 +217,47 @@ export async function buildSpringBootServices() {
   const glob = (await import("fast-glob")).default
   const fs = await import("fs")
 
-  for (const service of config.springBoot.services) {
+  let servicesToBuild = config.springBoot.services
+
+  let buildMode = mode?.toLowerCase()
+
+  if (!buildMode) {
+    const { selectedMode } = await inquirer.prompt({
+      type: "list",
+      name: "selectedMode",
+      message: "Select build mode:",
+      choices: [
+        { name: "Build All", value: "all" },
+        { name: "Build Selective", value: "selective" },
+      ],
+    })
+    buildMode = selectedMode
+  }
+
+  if (buildMode === "selective") {
+    const { selectedServices } = await inquirer.prompt({
+      type: "checkbox",
+      name: "selectedServices",
+      message: "Select services to build:",
+      choices: config.springBoot.services.map((s) => ({
+        name: s.name,
+        value: s.name,
+        checked: true,
+      })),
+      validate: (answer) => {
+        if (answer.length < 1) {
+          return "You must choose at least one service."
+        }
+        return true
+      },
+    })
+
+    servicesToBuild = config.springBoot.services.filter((s) =>
+      selectedServices.includes(s.name)
+    )
+  }
+
+  for (const service of servicesToBuild) {
     await buildService(service, absoluteBuildOutDir, glob, fs)
   }
 
@@ -242,7 +283,7 @@ async function buildService(
   const mvnwFullPath = join(servicePath, mvnwName)
 
   let command = "mvn"
-  
+
   if (existsSync(mvnwFullPath)) {
     command = process.platform === "win32" ? mvnwFullPath : `./${mvnwName}`
   }
@@ -265,13 +306,13 @@ async function buildService(
 
       const targetDir = join(servicePath, "target")
       if (!existsSync(targetDir)) {
-          ui.error(`Target directory not found for ${service.name}`)
-          reject(new Error(`Target directory missing`))
-          return
+        ui.error(`Target directory not found for ${service.name}`)
+        reject(new Error(`Target directory missing`))
+        return
       }
 
       const jarFiles = await glob("*.jar", { cwd: targetDir, absolute: true })
-      
+
       const jarFile =
         jarFiles.find((f: string) => !f.includes("original-")) || jarFiles[0]
 
@@ -282,7 +323,7 @@ async function buildService(
       }
 
       const destPath = join(buildOutDir, `${service.name}.jar`)
-      
+
       fs.copyFileSync(jarFile, destPath)
       resolve()
     })
