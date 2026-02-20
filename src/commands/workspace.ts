@@ -51,7 +51,7 @@ export async function workspaceInit() {
         type: "confirm",
         name: "confirm",
         message: chalk.yellow(
-          "⚠️  This will overwrite your existing config. Continue?"
+          "⚠️  This will overwrite your existing config. Continue?",
         ),
         default: false,
       });
@@ -63,7 +63,7 @@ export async function workspaceInit() {
       initWorkspaceConfig();
       ui.success(
         "New workspace config created",
-        `Location: ${getWorkspaceConfigPath()}`
+        `Location: ${getWorkspaceConfigPath()}`,
       );
     } else if (action === "import") {
       const { filePath } = await inquirer.prompt({
@@ -82,7 +82,7 @@ export async function workspaceInit() {
         writeWorkspaceConfig(importedConfig);
         ui.success(
           "Workspace config imported successfully",
-          `Location: ${getWorkspaceConfigPath()}`
+          `Location: ${getWorkspaceConfigPath()}`,
         );
       } catch (error: any) {
         ui.error("Failed to import config", error.message);
@@ -90,14 +90,14 @@ export async function workspaceInit() {
     } else {
       ui.info(
         "Using existing workspace config",
-        `Location: ${getWorkspaceConfigPath()}`
+        `Location: ${getWorkspaceConfigPath()}`,
       );
     }
   } else {
     initWorkspaceConfig();
     ui.success(
       "Workspace config created",
-      `Location: ${getWorkspaceConfigPath()}`
+      `Location: ${getWorkspaceConfigPath()}`,
     );
   }
 }
@@ -107,7 +107,7 @@ export async function workspaceConfig() {
   if (!workspaceConfigExists()) {
     ui.error(
       "Workspace config not found",
-      "Run 'dk workspace init' to create one"
+      "Run 'dk workspace init' to create one",
     );
     return;
   }
@@ -129,7 +129,7 @@ export async function workspaceConfig() {
 async function executeAction(
   action: WorkspaceAction,
   modulePath: string,
-  moduleName: string
+  moduleName: string,
 ): Promise<void> {
   const actionDesc = action.description || action.type;
 
@@ -141,7 +141,7 @@ async function executeAction(
         console.log(chalk.green(`  ✓ Opened ${moduleName} in VS Code`));
       } catch (error: any) {
         console.log(
-          chalk.red(`  ✗ Failed to open in VS Code: ${error.message}`)
+          chalk.red(`  ✗ Failed to open in VS Code: ${error.message}`),
         );
       }
       break;
@@ -153,7 +153,7 @@ async function executeAction(
         console.log(chalk.green(`  ✓ Opened ${moduleName} in Antigravity`));
       } catch (error: any) {
         console.log(
-          chalk.red(`  ✗ Failed to open in Antigravity: ${error.message}`)
+          chalk.red(`  ✗ Failed to open in Antigravity: ${error.message}`),
         );
       }
       break;
@@ -179,7 +179,7 @@ async function executeAction(
     case "run-script":
       if (!action.scriptPath) {
         console.log(
-          chalk.red(`  ✗ No script path specified for ${moduleName}`)
+          chalk.red(`  ✗ No script path specified for ${moduleName}`),
         );
         return;
       }
@@ -250,7 +250,7 @@ async function executeAction(
 // Process selected modules
 async function processModules(
   modules: WorkspaceModule[],
-  workspaceName: string
+  workspaceName: string,
 ) {
   console.log(chalk.cyan(`\n📦 Processing ${modules.length} module(s)...\n`));
 
@@ -272,7 +272,7 @@ async function processModules(
   }
 
   console.log(
-    chalk.green(`\n✓ Workspace "${workspaceName}" opened successfully!\n`)
+    chalk.green(`\n✓ Workspace "${workspaceName}" opened successfully!\n`),
   );
 }
 
@@ -281,7 +281,7 @@ export async function workspace() {
   if (!workspaceConfigExists()) {
     ui.error(
       "Workspace config not found",
-      "Run 'dk workspace init' to create one"
+      "Run 'dk workspace init' to create one",
     );
     return;
   }
@@ -291,7 +291,7 @@ export async function workspace() {
   if (config.workspaces.length === 0) {
     ui.warning(
       "No workspaces configured",
-      "Run 'dk workspace config' to add workspaces"
+      "Run 'dk workspace config' to add workspaces",
     );
     return;
   }
@@ -317,7 +317,7 @@ export async function workspace() {
   });
 
   const workspace = config.workspaces.find(
-    (ws) => ws.name === selectedWorkspace
+    (ws) => ws.name === selectedWorkspace,
   );
 
   if (!workspace) {
@@ -372,7 +372,7 @@ export async function workspace() {
     });
 
     selectedModules = workspace.modules.filter((m) =>
-      selectedModuleNames.includes(m.name)
+      selectedModuleNames.includes(m.name),
     );
   }
 
@@ -390,7 +390,7 @@ export async function workspaceList() {
   if (!workspaceConfigExists()) {
     ui.error(
       "Workspace config not found",
-      "Run 'dk workspace init' to create one"
+      "Run 'dk workspace init' to create one",
     );
     return;
   }
@@ -400,7 +400,7 @@ export async function workspaceList() {
   if (config.workspaces.length === 0) {
     ui.warning(
       "No workspaces configured",
-      "Run 'dk workspace config' to add workspaces"
+      "Run 'dk workspace config' to add workspaces",
     );
     return;
   }
@@ -419,7 +419,7 @@ export async function workspaceList() {
         ? chalk.green(" [default]")
         : "";
       console.log(
-        chalk.gray(`   - ${module.name}${defaultTag}: ${module.path}`)
+        chalk.gray(`   - ${module.name}${defaultTag}: ${module.path}`),
       );
     });
     console.log();

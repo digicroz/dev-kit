@@ -1,55 +1,55 @@
-import chalk from "chalk"
-import ora from "ora"
-import { execSync, spawn } from "child_process"
-import { existsSync, readFileSync, mkdirSync, copyFileSync } from "fs"
-import { join } from "path"
-import boxen from "boxen"
-import gradientString from "gradient-string"
+import chalk from "chalk";
+import ora from "ora";
+import { execSync, spawn } from "child_process";
+import { existsSync, readFileSync, mkdirSync, copyFileSync } from "fs";
+import { join } from "path";
+import boxen from "boxen";
+import gradientString from "gradient-string";
 
 // Helper function to get app name from app.json
 function getAppName(): string {
   try {
-    const appJsonPath = join(process.cwd(), "app.json")
+    const appJsonPath = join(process.cwd(), "app.json");
     if (existsSync(appJsonPath)) {
-      const appJson = JSON.parse(readFileSync(appJsonPath, "utf8"))
-      return appJson.name || appJson.displayName || "ReactNativeApp"
+      const appJson = JSON.parse(readFileSync(appJsonPath, "utf8"));
+      return appJson.name || appJson.displayName || "ReactNativeApp";
     }
 
     // Fallback to package.json if app.json doesn't exist
-    const packageJsonPath = join(process.cwd(), "package.json")
+    const packageJsonPath = join(process.cwd(), "package.json");
     if (existsSync(packageJsonPath)) {
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"))
-      return packageJson.name || "ReactNativeApp"
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+      return packageJson.name || "ReactNativeApp";
     }
 
-    return "ReactNativeApp"
+    return "ReactNativeApp";
   } catch (error) {
-    return "ReactNativeApp"
+    return "ReactNativeApp";
   }
 }
 
 // Helper function to generate timestamp in format: DD_MM_YYYY_HH_MM
 function getTimestamp(): string {
-  const now = new Date()
-  const day = now.getDate().toString().padStart(2, "0")
-  const month = (now.getMonth() + 1).toString().padStart(2, "0")
-  const year = now.getFullYear()
-  const hours = now.getHours().toString().padStart(2, "0")
-  const minutes = now.getMinutes().toString().padStart(2, "0")
+  const now = new Date();
+  const day = now.getDate().toString().padStart(2, "0");
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const year = now.getFullYear();
+  const hours = now.getHours().toString().padStart(2, "0");
+  const minutes = now.getMinutes().toString().padStart(2, "0");
 
-  return `${day}_${month}_${year}_${hours}_${minutes}`
+  return `${day}_${month}_${year}_${hours}_${minutes}`;
 }
 
 // Helper function to copy APK to organized folder
 function copyApkToBuildsFolder(buildType: string = "release"): string | null {
   try {
-    const appName = getAppName()
-    const timestamp = getTimestamp()
-    const apkBuildsDir = join(process.cwd(), "apk_builds")
+    const appName = getAppName();
+    const timestamp = getTimestamp();
+    const apkBuildsDir = join(process.cwd(), "apk_builds");
 
     // Create apk_builds directory if it doesn't exist
     if (!existsSync(apkBuildsDir)) {
-      mkdirSync(apkBuildsDir, { recursive: true })
+      mkdirSync(apkBuildsDir, { recursive: true });
     }
 
     // Source APK path
@@ -61,22 +61,22 @@ function copyApkToBuildsFolder(buildType: string = "release"): string | null {
       "outputs",
       "apk",
       buildType,
-      `app-${buildType}.apk`
-    )
+      `app-${buildType}.apk`,
+    );
 
     // Destination APK path with organized naming
-    const destinationFileName = `${appName}_${buildType}_${timestamp}.apk`
-    const destinationPath = join(apkBuildsDir, destinationFileName)
+    const destinationFileName = `${appName}_${buildType}_${timestamp}.apk`;
+    const destinationPath = join(apkBuildsDir, destinationFileName);
 
     if (existsSync(sourceApkPath)) {
-      copyFileSync(sourceApkPath, destinationPath)
-      return destinationPath
+      copyFileSync(sourceApkPath, destinationPath);
+      return destinationPath;
     }
 
-    return null
+    return null;
   } catch (error) {
-    console.error("Error copying APK:", error)
-    return null
+    console.error("Error copying APK:", error);
+    return null;
   }
 }
 
@@ -93,9 +93,9 @@ function performSystemCheck(): void {
         borderStyle: "round",
         borderColor: "blue",
         backgroundColor: "#0a0a1a",
-      }
-    )
-  )
+      },
+    ),
+  );
 
   const checks = [
     {
@@ -112,31 +112,31 @@ function performSystemCheck(): void {
         existsSync(join(process.cwd(), "app.json")) ||
         existsSync(join(process.cwd(), "package.json")),
     },
-  ]
+  ];
 
   checks.forEach(({ name, check }) => {
-    const result = check()
+    const result = check();
     console.log(
       result
         ? chalk.green("✓") + chalk.gray(` ${name}`)
-        : chalk.red("✗") + chalk.gray(` ${name}`)
-    )
-  })
+        : chalk.red("✗") + chalk.gray(` ${name}`),
+    );
+  });
 
-  console.log("") // Empty line for spacing
+  console.log(""); // Empty line for spacing
 }
 
 // Enhanced build function with detailed progress
 function runGradleBuildWithProgress(
   buildCommand: string,
-  buildType: string
+  buildType: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const spinner = ora({
       text: chalk.cyan(`Starting ${buildType} build...`),
       spinner: "dots12",
       color: "cyan",
-    }).start()
+    }).start();
 
     const gradleProcess = spawn(
       "cmd",
@@ -144,11 +144,11 @@ function runGradleBuildWithProgress(
       {
         cwd: process.cwd(),
         stdio: "pipe",
-      }
-    )
+      },
+    );
 
-    let currentTask = ""
-    let progress = 0
+    let currentTask = "";
+    let progress = 0;
     const progressSteps = [
       "Preparing build",
       "Compiling sources",
@@ -156,111 +156,111 @@ function runGradleBuildWithProgress(
       "Building APK",
       "Signing APK",
       "Finalizing",
-    ]
+    ];
 
     // Update progress periodically
     const progressInterval = setInterval(() => {
-      progress = Math.min(progress + 1, progressSteps.length - 1)
+      progress = Math.min(progress + 1, progressSteps.length - 1);
       spinner.text = chalk.cyan(
-        `${progressSteps[progress]}... ${buildType} build`
-      )
-    }, 3000)
+        `${progressSteps[progress]}... ${buildType} build`,
+      );
+    }, 3000);
 
-    let buildOutput = ""
-    let hasError = false
+    let buildOutput = "";
+    let hasError = false;
 
     gradleProcess.stdout?.on("data", (data) => {
-      const output = data.toString()
-      buildOutput += output
+      const output = data.toString();
+      buildOutput += output;
 
       // Parse Gradle output for task information
-      const taskMatch = output.match(/> Task :([^\n]+)/)
+      const taskMatch = output.match(/> Task :([^\n]+)/);
       if (taskMatch) {
-        const task = taskMatch[1]
-        currentTask = task
+        const task = taskMatch[1];
+        currentTask = task;
 
         // Update spinner based on current task
         if (task.includes("compile")) {
-          spinner.text = chalk.cyan(`📝 Compiling ${task.split(":").pop()}...`)
+          spinner.text = chalk.cyan(`📝 Compiling ${task.split(":").pop()}...`);
         } else if (task.includes("process")) {
           spinner.text = chalk.cyan(
-            `⚙️  Processing ${task.split(":").pop()}...`
-          )
+            `⚙️  Processing ${task.split(":").pop()}...`,
+          );
         } else if (task.includes("assemble")) {
-          spinner.text = chalk.cyan(`🔨 Assembling ${buildType} APK...`)
+          spinner.text = chalk.cyan(`🔨 Assembling ${buildType} APK...`);
         } else if (task.includes("sign")) {
-          spinner.text = chalk.cyan(`✍️  Signing APK...`)
+          spinner.text = chalk.cyan(`✍️  Signing APK...`);
         } else if (task.includes("transform")) {
-          spinner.text = chalk.cyan(`🔄 Transforming resources...`)
+          spinner.text = chalk.cyan(`🔄 Transforming resources...`);
         } else {
-          spinner.text = chalk.cyan(`🔧 ${task.split(":").pop()}...`)
+          spinner.text = chalk.cyan(`🔧 ${task.split(":").pop()}...`);
         }
       }
 
       // Check for build progress indicators
       if (output.includes("BUILD SUCCESSFUL")) {
-        clearInterval(progressInterval)
+        clearInterval(progressInterval);
         spinner.succeed(
           chalk.green(
-            `✓ ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK built successfully`
-          )
-        )
-        resolve()
+            `✓ ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK built successfully`,
+          ),
+        );
+        resolve();
       }
-    })
+    });
 
     gradleProcess.stderr?.on("data", (data) => {
-      const error = data.toString()
-      buildOutput += error
+      const error = data.toString();
+      buildOutput += error;
 
       // Check for specific error patterns
       if (error.includes("BUILD FAILED") || error.includes("FAILURE")) {
-        hasError = true
-        clearInterval(progressInterval)
-        spinner.fail(chalk.red(`✗ Failed to build ${buildType} APK`))
+        hasError = true;
+        clearInterval(progressInterval);
+        spinner.fail(chalk.red(`✗ Failed to build ${buildType} APK`));
 
         // Show more specific error information
         if (error.includes("OutOfMemoryError")) {
           console.log(
             chalk.yellow(
-              "💡 Tip: Try increasing Gradle memory in gradle.properties"
-            )
-          )
+              "💡 Tip: Try increasing Gradle memory in gradle.properties",
+            ),
+          );
         } else if (error.includes("permission denied")) {
           console.log(
             chalk.yellow(
-              "💡 Tip: Check file permissions or close other applications"
-            )
-          )
+              "💡 Tip: Check file permissions or close other applications",
+            ),
+          );
         }
       }
-    })
+    });
 
     gradleProcess.on("close", (code) => {
-      clearInterval(progressInterval)
+      clearInterval(progressInterval);
 
       if (code === 0 && !hasError) {
-        if (!spinner.isSpinning) return // Already handled success
+        if (!spinner.isSpinning) return; // Already handled success
         spinner.succeed(
           chalk.green(
-            `✓ ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK built successfully`
-          )
-        )
-        resolve()
+            `✓ ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK built successfully`,
+          ),
+        );
+        resolve();
       } else {
         if (!hasError) {
-          spinner.fail(chalk.red(`✗ Build failed with exit code ${code}`))
+          spinner.fail(chalk.red(`✗ Build failed with exit code ${code}`));
         }
-        reject(new Error(`Build failed with exit code ${code}`))
+        reject(new Error(`Build failed with exit code ${code}`));
       }
-    })
+    });
 
     gradleProcess.on("error", (error) => {
-      clearInterval(progressInterval)
-      spinner.fail(chalk.red(`✗ Failed to start build process`))
-      reject(error)
-    })
-  })
+      clearInterval(progressInterval);
+      spinner.fail(chalk.red(`✗ Failed to start build process`));
+      reject(error);
+    });
+  });
 }
 
 // Enhanced clean function with detailed progress
@@ -278,36 +278,36 @@ function runGradleCleanWithProgress(): Promise<void> {
           borderStyle: "round",
           borderColor: "blue",
           backgroundColor: "#0a0a1a",
-        }
-      )
-    )
+        },
+      ),
+    );
 
     const dirsToCheck = [
       { path: "android/app/build", name: "App Build Directory" },
       { path: "android/build", name: "Android Build Directory" },
       { path: "android/.gradle", name: "Gradle Cache" },
-    ]
+    ];
 
     dirsToCheck.forEach(({ path, name }) => {
-      const fullPath = join(process.cwd(), path)
-      const exists = existsSync(fullPath)
+      const fullPath = join(process.cwd(), path);
+      const exists = existsSync(fullPath);
       console.log(
         exists
           ? chalk.yellow("🗑️ ") + chalk.gray(`${name} (will be cleaned)`)
-          : chalk.green("✓ ") + chalk.gray(`${name} (already clean)`)
-      )
-    })
+          : chalk.green("✓ ") + chalk.gray(`${name} (already clean)`),
+      );
+    });
 
-    console.log("") // Empty line for spacing
+    console.log(""); // Empty line for spacing
 
     const spinner = ora({
       text: chalk.cyan("Initializing clean process..."),
       spinner: "dots12",
       color: "cyan",
-    }).start()
+    }).start();
 
     // Step 1: PowerShell force delete
-    spinner.text = chalk.cyan("🗑️  Force deleting build directories...")
+    spinner.text = chalk.cyan("🗑️  Force deleting build directories...");
 
     try {
       execSync(
@@ -315,11 +315,11 @@ function runGradleCleanWithProgress(): Promise<void> {
         {
           stdio: "pipe",
           cwd: process.cwd(),
-        }
-      )
-      spinner.text = chalk.cyan("✓ Build directories cleared")
+        },
+      );
+      spinner.text = chalk.cyan("✓ Build directories cleared");
     } catch (e) {
-      spinner.text = chalk.cyan("⚠ Some files may be locked, continuing...")
+      spinner.text = chalk.cyan("⚠ Some files may be locked, continuing...");
     }
 
     // Step 2: Gradle clean with progress
@@ -329,12 +329,12 @@ function runGradleCleanWithProgress(): Promise<void> {
       {
         cwd: process.cwd(),
         stdio: "pipe",
-      }
-    )
+      },
+    );
 
-    let cleanOutput = ""
-    let hasError = false
-    let currentStep = 0
+    let cleanOutput = "";
+    let hasError = false;
+    let currentStep = 0;
 
     const cleanSteps = [
       "Preparing clean",
@@ -342,37 +342,37 @@ function runGradleCleanWithProgress(): Promise<void> {
       "Removing generated files",
       "Clearing build cache",
       "Finalizing cleanup",
-    ]
+    ];
 
     // Update progress periodically
     const progressInterval = setInterval(() => {
-      currentStep = Math.min(currentStep + 1, cleanSteps.length - 1)
-      spinner.text = chalk.cyan(`🧹 ${cleanSteps[currentStep]}...`)
-    }, 1500)
+      currentStep = Math.min(currentStep + 1, cleanSteps.length - 1);
+      spinner.text = chalk.cyan(`🧹 ${cleanSteps[currentStep]}...`);
+    }, 1500);
 
     gradleProcess.stdout?.on("data", (data) => {
-      const output = data.toString()
-      cleanOutput += output
+      const output = data.toString();
+      cleanOutput += output;
 
       // Parse Gradle clean output for task information
-      const taskMatch = output.match(/> Task :([^\n]+)/)
+      const taskMatch = output.match(/> Task :([^\n]+)/);
       if (taskMatch) {
-        const task = taskMatch[1]
+        const task = taskMatch[1];
 
         // Update spinner based on current clean task
         if (task.includes("clean")) {
-          spinner.text = chalk.cyan(`🧹 Cleaning ${task.split(":").pop()}...`)
+          spinner.text = chalk.cyan(`🧹 Cleaning ${task.split(":").pop()}...`);
         } else if (task.includes("delete")) {
-          spinner.text = chalk.cyan(`🗑️  Deleting ${task.split(":").pop()}...`)
+          spinner.text = chalk.cyan(`🗑️  Deleting ${task.split(":").pop()}...`);
         } else {
-          spinner.text = chalk.cyan(`🔧 ${task.split(":").pop()}...`)
+          spinner.text = chalk.cyan(`🔧 ${task.split(":").pop()}...`);
         }
       }
 
       // Check for clean completion
       if (output.includes("BUILD SUCCESSFUL")) {
-        clearInterval(progressInterval)
-        spinner.succeed(chalk.green("✓ Android project cleaned successfully"))
+        clearInterval(progressInterval);
+        spinner.succeed(chalk.green("✓ Android project cleaned successfully"));
 
         // Show clean completion summary
         console.log(
@@ -390,59 +390,59 @@ function runGradleCleanWithProgress(): Promise<void> {
               borderStyle: "round",
               borderColor: "green",
               backgroundColor: "#0a1a0a",
-            }
-          )
-        )
+            },
+          ),
+        );
 
-        resolve()
+        resolve();
       }
-    })
+    });
 
     gradleProcess.stderr?.on("data", (data) => {
-      const error = data.toString()
-      cleanOutput += error
+      const error = data.toString();
+      cleanOutput += error;
 
       // Check for specific error patterns
       if (error.includes("BUILD FAILED") || error.includes("FAILURE")) {
-        hasError = true
-        clearInterval(progressInterval)
+        hasError = true;
+        clearInterval(progressInterval);
         spinner.warn(
-          chalk.yellow("⚠ Clean had issues, proceeding with build...")
-        )
+          chalk.yellow("⚠ Clean had issues, proceeding with build..."),
+        );
 
         // Show more specific error information
         if (error.includes("Unable to delete directory")) {
           console.log(
             chalk.gray(
-              "Note: Some files may be locked by Windows Explorer or other processes"
-            )
-          )
+              "Note: Some files may be locked by Windows Explorer or other processes",
+            ),
+          );
         }
-        resolve() // Don't reject, just warn and continue
+        resolve(); // Don't reject, just warn and continue
       }
-    })
+    });
 
     gradleProcess.on("close", (code) => {
-      clearInterval(progressInterval)
+      clearInterval(progressInterval);
 
       if (code === 0 && !hasError) {
-        if (!spinner.isSpinning) return // Already handled success
-        spinner.succeed(chalk.green("✓ Android project cleaned successfully"))
-        resolve()
+        if (!spinner.isSpinning) return; // Already handled success
+        spinner.succeed(chalk.green("✓ Android project cleaned successfully"));
+        resolve();
       } else {
         if (!hasError) {
-          spinner.warn(chalk.yellow("⚠ Clean completed with warnings"))
+          spinner.warn(chalk.yellow("⚠ Clean completed with warnings"));
         }
-        resolve() // Don't reject, just warn and continue
+        resolve(); // Don't reject, just warn and continue
       }
-    })
+    });
 
     gradleProcess.on("error", (error) => {
-      clearInterval(progressInterval)
-      spinner.warn(chalk.yellow("⚠ Clean process had issues, continuing..."))
-      resolve() // Don't reject, just warn and continue
-    })
-  })
+      clearInterval(progressInterval);
+      spinner.warn(chalk.yellow("⚠ Clean process had issues, continuing..."));
+      resolve(); // Don't reject, just warn and continue
+    });
+  });
 }
 
 // Helper function to handle Windows file locking issues
@@ -466,14 +466,14 @@ async function handleWindowsFileLocks() {
         borderStyle: "round",
         borderColor: "yellow",
         backgroundColor: "#1a1a00",
-      }
-    )
-  )
+      },
+    ),
+  );
 }
 
 export async function buildAndroidRelease(
   skipClean: boolean = false,
-  buildType: string = "release"
+  buildType: string = "release",
 ) {
   console.log(
     boxen(
@@ -486,15 +486,15 @@ export async function buildAndroidRelease(
         borderStyle: "round",
         borderColor: "green",
         backgroundColor: "#0a1a0a",
-      }
-    )
-  )
+      },
+    ),
+  );
 
   // Perform system check
-  performSystemCheck()
+  performSystemCheck();
 
   // Check if we're in a React Native project
-  const androidDir = join(process.cwd(), "android")
+  const androidDir = join(process.cwd(), "android");
   if (!existsSync(androidDir)) {
     console.log(
       boxen(
@@ -506,14 +506,14 @@ export async function buildAndroidRelease(
           borderStyle: "round",
           borderColor: "red",
           backgroundColor: "#1a0000",
-        }
-      )
-    )
-    return
+        },
+      ),
+    );
+    return;
   }
 
-  const gradlewPath = join(androidDir, "gradlew.bat")
-  const hasGradlewBat = existsSync(gradlewPath)
+  const gradlewPath = join(androidDir, "gradlew.bat");
+  const hasGradlewBat = existsSync(gradlewPath);
 
   if (!hasGradlewBat) {
     console.log(
@@ -526,10 +526,10 @@ export async function buildAndroidRelease(
           borderStyle: "round",
           borderColor: "red",
           backgroundColor: "#1a0000",
-        }
-      )
-    )
-    return
+        },
+      ),
+    );
+    return;
   }
 
   try {
@@ -546,30 +546,30 @@ export async function buildAndroidRelease(
             borderStyle: "round",
             borderColor: "yellow",
             backgroundColor: "#1a1a00",
-          }
-        )
-      )
+          },
+        ),
+      );
 
       try {
-        await runGradleCleanWithProgress()
+        await runGradleCleanWithProgress();
       } catch (error: any) {
         // If clean fails completely, show help and continue
         console.log(
           chalk.gray(
-            "Note: Clean process encountered issues, but continuing with build..."
-          )
-        )
+            "Note: Clean process encountered issues, but continuing with build...",
+          ),
+        );
 
         // Check if it's the specific Windows file lock error
         if (
           error.message &&
           error.message.includes("Unable to delete directory")
         ) {
-          await handleWindowsFileLocks()
+          await handleWindowsFileLocks();
         }
       }
     } else {
-      console.log(chalk.gray("⏭ Skipping clean step"))
+      console.log(chalk.gray("⏭ Skipping clean step"));
     }
 
     // Step 2: Build with Enhanced Progress
@@ -578,7 +578,7 @@ export async function buildAndroidRelease(
         chalk.blue("🔨 Build Process Starting") +
           "\n" +
           chalk.gray(
-            `Target: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK`
+            `Target: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK`,
           ) +
           "\n" +
           chalk.gray("This may take a few minutes..."),
@@ -588,32 +588,32 @@ export async function buildAndroidRelease(
           borderStyle: "round",
           borderColor: "blue",
           backgroundColor: "#0a0a1a",
-        }
-      )
-    )
+        },
+      ),
+    );
 
     try {
       const buildCommand =
-        buildType === "debug" ? "assembleDebug" : "assembleRelease"
-      await runGradleBuildWithProgress(buildCommand, buildType)
+        buildType === "debug" ? "assembleDebug" : "assembleRelease";
+      await runGradleBuildWithProgress(buildCommand, buildType);
     } catch (error) {
-      throw error
+      throw error;
     }
 
     // Success message with build summary
-    const buildTime = new Date().toLocaleTimeString()
+    const buildTime = new Date().toLocaleTimeString();
     console.log(
       boxen(
         chalk.green("🎉 Build Complete!") +
           "\n" +
           chalk.gray(
-            `Build Type: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)}`
+            `Build Type: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)}`,
           ) +
           "\n" +
           chalk.gray(`Completed: ${buildTime}`) +
           "\n" +
           chalk.gray(
-            `Original APK: android/app/build/outputs/apk/${buildType}/app-${buildType}.apk`
+            `Original APK: android/app/build/outputs/apk/${buildType}/app-${buildType}.apk`,
           ),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -621,27 +621,27 @@ export async function buildAndroidRelease(
           borderStyle: "round",
           borderColor: "green",
           backgroundColor: "#0a1a0a",
-        }
-      )
-    )
+        },
+      ),
+    );
 
     // Copy APK to organized builds folder
     const copySpinner = ora({
       text: chalk.cyan("Organizing APK in builds folder..."),
       spinner: "dots12",
       color: "cyan",
-    }).start()
+    }).start();
 
-    const copiedApkPath = copyApkToBuildsFolder(buildType)
+    const copiedApkPath = copyApkToBuildsFolder(buildType);
 
     if (copiedApkPath) {
-      copySpinner.succeed(chalk.green("✓ APK copied to builds folder"))
+      copySpinner.succeed(chalk.green("✓ APK copied to builds folder"));
 
       // Get file size for additional info
       try {
-        const fs = require("fs")
-        const stats = fs.statSync(copiedApkPath)
-        const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2)
+        const fs = require("fs");
+        const stats = fs.statSync(copiedApkPath);
+        const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
 
         console.log(
           boxen(
@@ -658,9 +658,9 @@ export async function buildAndroidRelease(
               borderStyle: "round",
               borderColor: "blue",
               backgroundColor: "#0a0a1a",
-            }
-          )
-        )
+            },
+          ),
+        );
       } catch (e) {
         console.log(
           boxen(
@@ -675,12 +675,12 @@ export async function buildAndroidRelease(
               borderStyle: "round",
               borderColor: "blue",
               backgroundColor: "#0a0a1a",
-            }
-          )
-        )
+            },
+          ),
+        );
       }
     } else {
-      copySpinner.warn(chalk.yellow("⚠ Could not copy APK to builds folder"))
+      copySpinner.warn(chalk.yellow("⚠ Could not copy APK to builds folder"));
     }
   } catch (error: any) {
     console.log(
@@ -693,14 +693,14 @@ export async function buildAndroidRelease(
           borderStyle: "round",
           borderColor: "red",
           backgroundColor: "#1a0000",
-        }
-      )
-    )
-    throw error
+        },
+      ),
+    );
+    throw error;
   }
 }
 
 // Wrapper function for debug builds
 export async function buildAndroidDebug(skipClean: boolean = false) {
-  return await buildAndroidRelease(skipClean, "debug")
+  return await buildAndroidRelease(skipClean, "debug");
 }

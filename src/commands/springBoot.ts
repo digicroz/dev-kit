@@ -1,125 +1,125 @@
-import { spawn, ChildProcess } from "child_process"
-import { join } from "path"
-import { existsSync } from "fs"
-import inquirer from "inquirer"
-import { ui } from "../utils/ui-helpers"
-import { readConfig, configExists } from "../utils/config"
-import type { SpringBootService } from "../types/config"
+import { spawn, ChildProcess } from "child_process";
+import { join } from "path";
+import { existsSync } from "fs";
+import inquirer from "inquirer";
+import { ui } from "../utils/ui-helpers";
+import { readConfig, configExists } from "../utils/config";
+import type { SpringBootService } from "../types/config";
 
 export async function startSpringBootServices() {
   if (!configExists()) {
-    ui.error("dk.config.json not found. Run 'dk init' first.")
-    return
+    ui.error("dk.config.json not found. Run 'dk init' first.");
+    return;
   }
 
-  const config = readConfig()
+  const config = readConfig();
   if (!config || config.projectType !== "spring-boot-microservice") {
     ui.error(
-      "This command is only available for Spring Boot microservice projects."
-    )
-    return
+      "This command is only available for Spring Boot microservice projects.",
+    );
+    return;
   }
 
   if (!config.springBoot?.services || config.springBoot.services.length === 0) {
     ui.error(
-      "No Spring Boot services configured. Run 'dk init' to configure services."
-    )
-    return
+      "No Spring Boot services configured. Run 'dk init' to configure services.",
+    );
+    return;
   }
 
-  ui.info("Starting Spring Boot microservices...")
+  ui.info("Starting Spring Boot microservices...");
 
   // Sort services by starting order
   const sortedServices = [...config.springBoot.services].sort(
-    (a, b) => a.startingOrderIndex - b.startingOrderIndex
-  )
+    (a, b) => a.startingOrderIndex - b.startingOrderIndex,
+  );
 
   const runningProcesses: {
-    service: SpringBootService
-    process: ChildProcess
-  }[] = []
+    service: SpringBootService;
+    process: ChildProcess;
+  }[] = [];
 
   try {
     for (const service of sortedServices) {
-      await startService(service, runningProcesses)
+      await startService(service, runningProcesses);
 
       // Wait a bit between service starts to avoid overwhelming the system
       if (sortedServices.indexOf(service) < sortedServices.length - 1) {
-        ui.info(`Waiting 3 seconds before starting next service...`)
-        await new Promise((resolve) => setTimeout(resolve, 3000))
+        ui.info(`Waiting 3 seconds before starting next service...`);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     }
 
-    ui.success("All Spring Boot services started successfully!")
-    ui.info("Press Ctrl+C to stop all services.")
+    ui.success("All Spring Boot services started successfully!");
+    ui.info("Press Ctrl+C to stop all services.");
 
     // Handle graceful shutdown
     process.on("SIGINT", () => {
-      ui.info("\nShutting down all services...")
+      ui.info("\nShutting down all services...");
       runningProcesses.forEach(({ service, process }) => {
-        ui.info(`Stopping ${service.name}...`)
-        process.kill("SIGTERM")
-      })
-      process.exit(0)
-    })
+        ui.info(`Stopping ${service.name}...`);
+        process.kill("SIGTERM");
+      });
+      process.exit(0);
+    });
 
     // Keep the process alive
-    await new Promise(() => { })
+    await new Promise(() => {});
   } catch (error: any) {
-    ui.error("Failed to start services:", error.message)
+    ui.error("Failed to start services:", error.message);
 
     // Clean up any running processes
     runningProcesses.forEach(({ service, process }) => {
-      ui.info(`Stopping ${service.name}...`)
-      process.kill("SIGTERM")
-    })
+      ui.info(`Stopping ${service.name}...`);
+      process.kill("SIGTERM");
+    });
   }
 }
 
 async function startService(
   service: SpringBootService,
-  runningProcesses: { service: SpringBootService; process: ChildProcess }[]
+  runningProcesses: { service: SpringBootService; process: ChildProcess }[],
 ): Promise<void> {
-  const servicePath = join(process.cwd(), service.path)
+  const servicePath = join(process.cwd(), service.path);
 
   if (!existsSync(servicePath)) {
-    throw new Error(`Service directory not found: ${servicePath}`)
+    throw new Error(`Service directory not found: ${servicePath}`);
   }
 
-  ui.info(`Starting ${service.name} (order: ${service.startingOrderIndex})`)
-  ui.info(`Service path: ${servicePath}`)
+  ui.info(`Starting ${service.name} (order: ${service.startingOrderIndex})`);
+  ui.info(`Service path: ${servicePath}`);
 
   // Check for Maven wrapper
-  const mvnwPath = process.platform === "win32" ? "mvnw.cmd" : "./mvnw"
+  const mvnwPath = process.platform === "win32" ? "mvnw.cmd" : "./mvnw";
   const mvnwFullPath = join(
     servicePath,
-    process.platform === "win32" ? "mvnw.cmd" : "mvnw"
-  )
+    process.platform === "win32" ? "mvnw.cmd" : "mvnw",
+  );
 
   if (!existsSync(mvnwFullPath)) {
     throw new Error(
-      `Maven wrapper not found in ${servicePath}. Expected: ${mvnwFullPath}`
-    )
+      `Maven wrapper not found in ${servicePath}. Expected: ${mvnwFullPath}`,
+    );
   }
 
   return new Promise((resolve, reject) => {
-    const args = ["spring-boot:run"]
-    const command = process.platform === "win32" ? mvnwPath : mvnwPath
+    const args = ["spring-boot:run"];
+    const command = process.platform === "win32" ? mvnwPath : mvnwPath;
 
-    ui.info(`Executing: ${command} ${args.join(" ")} in ${servicePath}`)
+    ui.info(`Executing: ${command} ${args.join(" ")} in ${servicePath}`);
 
     const childProcess = spawn(command, args, {
       cwd: servicePath,
       stdio: ["inherit", "pipe", "pipe"],
       shell: process.platform === "win32",
-    })
+    });
 
-    let startupComplete = false
+    let startupComplete = false;
 
     // Handle stdout
     childProcess.stdout?.on("data", (data) => {
-      const output = data.toString()
-      console.log(`[${service.name}] ${output}`)
+      const output = data.toString();
+      console.log(`[${service.name}] ${output}`);
 
       // Look for Spring Boot startup completion indicators
       if (
@@ -128,98 +128,97 @@ async function startService(
         (output.includes("seconds") || output.includes("ms"))
       ) {
         if (!startupComplete) {
-          startupComplete = true
-          ui.success(`${service.name} started successfully!`)
-          runningProcesses.push({ service, process: childProcess })
-          resolve()
+          startupComplete = true;
+          ui.success(`${service.name} started successfully!`);
+          runningProcesses.push({ service, process: childProcess });
+          resolve();
         }
       }
-    })
+    });
 
     // Handle stderr
     childProcess.stderr?.on("data", (data) => {
-      const output = data.toString()
-      console.error(`[${service.name}] ERROR: ${output}`)
-    })
+      const output = data.toString();
+      console.error(`[${service.name}] ERROR: ${output}`);
+    });
 
     // Handle process exit
     childProcess.on("exit", (code, signal) => {
       if (code !== 0 && code !== null) {
-        const error = `${service.name} exited with code ${code}`
-        ui.error(error)
+        const error = `${service.name} exited with code ${code}`;
+        ui.error(error);
         if (!startupComplete) {
-          reject(new Error(error))
+          reject(new Error(error));
         }
       }
-    })
+    });
 
     // Handle process errors
     childProcess.on("error", (error) => {
-      const errorMsg = `Failed to start ${service.name}: ${error.message}`
-      ui.error(errorMsg)
+      const errorMsg = `Failed to start ${service.name}: ${error.message}`;
+      ui.error(errorMsg);
       if (!startupComplete) {
-        reject(new Error(errorMsg))
+        reject(new Error(errorMsg));
       }
-    })
+    });
 
     // Timeout after 60 seconds if service doesn't start
     setTimeout(() => {
       if (!startupComplete) {
-        const timeoutMsg = `${service.name} startup timed out after 60 seconds`
-        ui.warning(timeoutMsg)
-        startupComplete = true
-        runningProcesses.push({ service, process: childProcess })
-        resolve() // Continue with other services even if this one times out
+        const timeoutMsg = `${service.name} startup timed out after 60 seconds`;
+        ui.warning(timeoutMsg);
+        startupComplete = true;
+        runningProcesses.push({ service, process: childProcess });
+        resolve(); // Continue with other services even if this one times out
       }
-    }, 60000)
-  })
+    }, 60000);
+  });
 }
-
 
 export async function buildSpringBootServices(mode?: string) {
   if (!configExists()) {
-    ui.error("dk.config.json not found. Run 'dk init' first.")
-    return
+    ui.error("dk.config.json not found. Run 'dk init' first.");
+    return;
   }
 
-  const config = readConfig()
+  const config = readConfig();
   if (!config || config.projectType !== "spring-boot-microservice") {
     ui.error(
-      "This command is only available for Spring Boot microservice projects."
-    )
-    return
+      "This command is only available for Spring Boot microservice projects.",
+    );
+    return;
   }
 
   if (!config.springBoot?.services || config.springBoot.services.length === 0) {
     ui.error(
-      "No Spring Boot services configured. Run 'dk init' to configure services."
-    )
-    return
+      "No Spring Boot services configured. Run 'dk init' to configure services.",
+    );
+    return;
   }
 
-  const buildOutDir = config.springBoot.buildOutDir
+  const buildOutDir = config.springBoot.buildOutDir;
   if (!buildOutDir) {
     ui.error(
-      "buildOutDir is not configured in springBoot section of dk.config.json"
-    )
-    return
+      "buildOutDir is not configured in springBoot section of dk.config.json",
+    );
+    return;
   }
 
-  const absoluteBuildOutDir = join(process.cwd(), buildOutDir)
+  const absoluteBuildOutDir = join(process.cwd(), buildOutDir);
   if (!existsSync(absoluteBuildOutDir)) {
-    ui.info(`Creating build output directory: ${absoluteBuildOutDir}`)
-    const fs = await import("fs")
-    fs.mkdirSync(absoluteBuildOutDir, { recursive: true })
+    ui.info(`Creating build output directory: ${absoluteBuildOutDir}`);
+    const fs = await import("fs");
+    fs.mkdirSync(absoluteBuildOutDir, { recursive: true });
   }
 
-  ui.info("Building Spring Boot microservices...")
+  ui.info("Building Spring Boot microservices...");
 
-  const glob = (await import("fast-glob")).default
-  const fs = await import("fs")
+  const glob = (await import("fast-glob")).default;
+  const fs = await import("fs");
 
-  let servicesToBuild = config.springBoot.services
+  let servicesToBuild = config.springBoot.services;
 
-  let buildMode = mode?.toLowerCase()
+  let buildMode = mode?.toLowerCase();
 
   if (!buildMode) {
     const { selectedMode } = await inquirer.prompt({
@@ -230,8 +229,8 @@ export async function buildSpringBootServices(mode?: string) {
         { name: "Build All", value: "all" },
         { name: "Build Selective", value: "selective" },
       ],
-    })
-    buildMode = selectedMode
+    });
+    buildMode = selectedMode;
   }
 
   if (buildMode === "selective") {
@@ -246,93 +245,93 @@ export async function buildSpringBootServices(mode?: string) {
       })),
       validate: (answer) => {
         if (answer.length < 1) {
-          return "You must choose at least one service."
+          return "You must choose at least one service.";
         }
-        return true
+        return true;
       },
-    })
+    });
 
     servicesToBuild = config.springBoot.services.filter((s) =>
-      selectedServices.includes(s.name)
-    )
+      selectedServices.includes(s.name),
+    );
   }
 
   for (const service of servicesToBuild) {
-    await buildService(service, absoluteBuildOutDir, glob, fs)
+    await buildService(service, absoluteBuildOutDir, glob, fs);
   }
 
-  ui.success("All services built and artifacts moved successfully!")
+  ui.success("All services built and artifacts moved successfully!");
 }
 
 async function buildService(
   service: SpringBootService,
   buildOutDir: string,
   glob: any,
-  fs: any
+  fs: any,
 ): Promise<void> {
-  const servicePath = join(process.cwd(), service.path)
+  const servicePath = join(process.cwd(), service.path);
 
   if (!existsSync(servicePath)) {
-    ui.error(`Service directory not found: ${servicePath}`)
-    return
+    ui.error(`Service directory not found: ${servicePath}`);
+    return;
   }
 
-  ui.info(`Building ${service.name}...`)
+  ui.info(`Building ${service.name}...`);
 
-  const mvnwName = process.platform === "win32" ? "mvnw.cmd" : "mvnw"
-  const mvnwFullPath = join(servicePath, mvnwName)
+  const mvnwName = process.platform === "win32" ? "mvnw.cmd" : "mvnw";
+  const mvnwFullPath = join(servicePath, mvnwName);
 
-  let command = "mvn"
+  let command = "mvn";
 
   if (existsSync(mvnwFullPath)) {
-    command = process.platform === "win32" ? mvnwFullPath : `./${mvnwName}`
+    command = process.platform === "win32" ? mvnwFullPath : `./${mvnwName}`;
   }
 
   return new Promise((resolve, reject) => {
-    const args = ["clean", "install"]
+    const args = ["clean", "install"];
 
     const childProcess = spawn(command, args, {
       cwd: servicePath,
       stdio: "inherit",
       shell: true,
-    })
+    });
 
     childProcess.on("exit", async (code) => {
       if (code !== 0) {
-        ui.error(`Build failed for ${service.name} with code ${code}`)
-        reject(new Error(`Build failed for ${service.name}`))
-        return
+        ui.error(`Build failed for ${service.name} with code ${code}`);
+        reject(new Error(`Build failed for ${service.name}`));
+        return;
       }
 
-      const targetDir = join(servicePath, "target")
+      const targetDir = join(servicePath, "target");
       if (!existsSync(targetDir)) {
-        ui.error(`Target directory not found for ${service.name}`)
-        reject(new Error(`Target directory missing`))
-        return
+        ui.error(`Target directory not found for ${service.name}`);
+        reject(new Error(`Target directory missing`));
+        return;
       }
 
-      const jarFiles = await glob("*.jar", { cwd: targetDir, absolute: true })
+      const jarFiles = await glob("*.jar", { cwd: targetDir, absolute: true });
 
       const jarFile =
-        jarFiles.find((f: string) => !f.includes("original-")) || jarFiles[0]
+        jarFiles.find((f: string) => !f.includes("original-")) || jarFiles[0];
 
       if (!jarFile) {
-        ui.error(`No jar file found in ${targetDir} for ${service.name}`)
-        reject(new Error(`No jar file found for ${service.name}`))
-        return
+        ui.error(`No jar file found in ${targetDir} for ${service.name}`);
+        reject(new Error(`No jar file found for ${service.name}`));
+        return;
       }
 
-      const destPath = join(buildOutDir, `${service.name}.jar`)
+      const destPath = join(buildOutDir, `${service.name}.jar`);
 
-      fs.copyFileSync(jarFile, destPath)
-      resolve()
-    })
+      fs.copyFileSync(jarFile, destPath);
+      resolve();
+    });
 
     childProcess.on("error", (err) => {
       ui.error(
-        `Failed to start build process for ${service.name}: ${err.message}`
-      )
-      reject(err)
-    })
-  })
+        `Failed to start build process for ${service.name}: ${err.message}`,
+      );
+      reject(err);
+    });
+  });
 }
