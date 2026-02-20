@@ -1,1 +1,1 @@
-"@digicroz/dev-kit": "file:C:/DigiCrozRepos/npmPackages/dev-kit",
+"@digicroz/dev-kit": "file:C:/digicroz-repos/npmPackages/dev-kit",
