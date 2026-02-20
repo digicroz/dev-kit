@@ -23,7 +23,10 @@ import {
 } from "../src/utils/config.js";
 import { init as runInit } from "../src/commands/init.js";
 import { updateConfig } from "../src/commands/config.js";
-import { startSpringBootServices, buildSpringBootServices } from "../src/commands/springBoot.js";
+import {
+  startSpringBootServices,
+  buildSpringBootServices,
+} from "../src/commands/springBoot.js";
 import { gen } from "../src/commands/gen.js";
 import {
   gitFix,
@@ -48,7 +51,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJson = JSON.parse(
-  readFileSync(join(__dirname, "../package.json"), "utf8")
+  readFileSync(join(__dirname, "../package.json"), "utf8"),
 );
 const version = packageJson.version;
 
@@ -59,18 +62,18 @@ async function showWelcomeBanner() {
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
     gradientString("cyan", "blue")("🚀 Development Kit") +
-    chalk.gray(" v" + version) +
-    "\n" +
-    chalk.cyan("━".repeat(20)) +
-    "\n" +
-    chalk.white("Fast • Beautiful • Modern ⚡"),
+      chalk.gray(" v" + version) +
+      "\n" +
+      chalk.cyan("━".repeat(20)) +
+      "\n" +
+      chalk.white("Fast • Beautiful • Modern ⚡"),
     {
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
       margin: { top: 0, bottom: 1, left: 0, right: 0 },
       borderStyle: "round",
       borderColor: "cyan",
       backgroundColor: "#0a0a1e",
-    }
+    },
   );
 
   console.log(welcomeMessage);
@@ -80,7 +83,7 @@ async function showWelcomeBanner() {
 function createBox(
   message: string,
   color: string,
-  backgroundColor: string = "#0a0a1a"
+  backgroundColor: string = "#0a0a1a",
 ) {
   return boxen(message, {
     padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -97,13 +100,13 @@ function showProjectModeRequired() {
   console.log(
     createBox(
       chalk.red("⚠️ Project Mode Required") +
-      "\n" +
-      chalk.gray("This command requires dk.config.json") +
-      "\n" +
-      chalk.cyan("Run 'dk init' to create project configuration"),
+        "\n" +
+        chalk.gray("This command requires dk.config.json") +
+        "\n" +
+        chalk.cyan("Run 'dk init' to create project configuration"),
       "red",
-      "#1a0000"
-    )
+      "#1a0000",
+    ),
   );
   process.exit(1);
 }
@@ -115,8 +118,8 @@ function handleCancellation(commandName: string) {
     createBox(
       chalk.yellow("⚠️ ") + chalk.white(`${commandName} cancelled by user`),
       "yellow",
-      "#1a1a00"
-    )
+      "#1a1a00",
+    ),
   );
 }
 
@@ -130,7 +133,7 @@ function createEnhancedCommand(
   name: string,
   description: string,
   action: Function,
-  requiresProject: boolean = false
+  requiresProject: boolean = false,
 ) {
   return {
     name,
@@ -178,8 +181,8 @@ process.on("SIGINT", () => {
     console.log(
       gradientString(
         "yellow",
-        "orange"
-      )("👋 Thanks for using DK! See you soon! ✨")
+        "orange",
+      )("👋 Thanks for using DK! See you soon! ✨"),
     );
     process.exit(0);
   }
@@ -191,8 +194,8 @@ process.on("uncaughtException", (error) => {
     createBox(
       chalk.red("💥 Error: ") + chalk.white(error.message),
       "red",
-      "#1a0000"
-    )
+      "#1a0000",
+    ),
   );
   process.exit(1);
 });
@@ -225,15 +228,15 @@ async function main() {
   console.log(
     createBox(
       chalk[modeColor](`${modeIcon} ${mode}`) +
-      "\n" +
-      chalk.gray(
-        projectMode
-          ? "Running with project configuration"
-          : "Running in standalone mode - some commands require 'dk init'"
-      ),
+        "\n" +
+        chalk.gray(
+          projectMode
+            ? "Running with project configuration"
+            : "Running in standalone mode - some commands require 'dk init'",
+        ),
       modeColor,
-      projectMode ? "#0a1a0a" : "#1a1a00"
-    )
+      projectMode ? "#0a1a0a" : "#1a1a00",
+    ),
   );
 
   // Check config version and warn if outdated (only in project mode)
@@ -242,7 +245,7 @@ async function main() {
     if (isConfigOutdated(config)) {
       ui.warning(
         "Your dk.config.json is outdated.",
-        "Run 'dk config update' to update your config file."
+        "Run 'dk config update' to update your config file.",
       );
     }
   }
@@ -270,7 +273,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "init",
         "Initializing configuration",
-        runInit
+        runInit,
       );
       await cmd.execute(...args);
     });
@@ -284,7 +287,7 @@ async function main() {
         "clean",
         "Cleaning project",
         clean,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -297,7 +300,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "doctor",
         "Running diagnostics",
-        doctor
+        doctor,
       );
       await cmd.execute(...args);
     });
@@ -315,7 +318,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Workspace init",
         "Initializing workspace configuration",
-        workspaceInit
+        workspaceInit,
       );
       await cmd.execute(...args);
     });
@@ -327,7 +330,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Workspace config",
         "Opening workspace configuration",
-        workspaceConfig
+        workspaceConfig,
       );
       await cmd.execute(...args);
     });
@@ -339,7 +342,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Workspace list",
         "Listing workspaces",
-        workspaceList
+        workspaceList,
       );
       await cmd.execute(...args);
     });
@@ -349,7 +352,7 @@ async function main() {
     const cmd = createEnhancedCommand(
       "Workspace",
       "Opening workspace selector",
-      workspace
+      workspace,
     );
     await cmd.execute(...args);
   });
@@ -368,11 +371,11 @@ async function main() {
         console.log(
           createBox(
             gradientString("magenta", "cyan")("🚀 Deployment Center") +
-            "\n" +
-            chalk.gray("Choose your destination"),
+              "\n" +
+              chalk.gray("Choose your destination"),
             "magenta",
-            "#0a0a1a"
-          )
+            "#0a0a1a",
+          ),
         );
 
         const { environment } = await inquirer.prompt({
@@ -428,7 +431,7 @@ async function main() {
         "deploy dev",
         "Deploying to dev",
         deployDev,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -441,7 +444,7 @@ async function main() {
         "deploy prod",
         "Deploying to prod",
         deployProd,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -464,11 +467,11 @@ async function main() {
         console.log(
           createBox(
             gradientString("green", "blue")("📱 React Native Build Center") +
-            "\n" +
-            chalk.gray("Choose your build target"),
+              "\n" +
+              chalk.gray("Choose your build target"),
             "green",
-            "#0a1a0a"
-          )
+            "#0a1a0a",
+          ),
         );
 
         const { buildType } = await inquirer.prompt({
@@ -536,7 +539,7 @@ async function main() {
         "React Native build release",
         "Building Android release",
         buildAndroidRelease,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -550,7 +553,7 @@ async function main() {
         "React Native build release (no clean)",
         "Building Android release without clean",
         () => buildAndroidRelease(true),
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -564,7 +567,7 @@ async function main() {
         "React Native build debug",
         "Building Android debug",
         buildAndroidDebug,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -578,7 +581,7 @@ async function main() {
         "React Native build debug (no clean)",
         "Building Android debug without clean",
         () => buildAndroidDebug(true),
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -597,7 +600,7 @@ async function main() {
         "Spring Boot start",
         "Starting microservices",
         startSpringBootServices,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -610,9 +613,9 @@ async function main() {
         "Spring Boot build",
         "Building microservices",
         () => buildSpringBootServices(mode),
-        true
-      )
-      await cmd.execute(...args)
+        true,
+      );
+      await cmd.execute(...args);
     });
 
   program
@@ -624,7 +627,7 @@ async function main() {
         "Generators",
         "Running all generators",
         gen,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -637,7 +640,7 @@ async function main() {
         "Git auto commit",
         "Committing project-specific files",
         gitAutoCommit,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -653,7 +656,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Git configuration fix",
         "Fixing git ignorecase settings",
-        gitFix
+        gitFix,
       );
       await cmd.execute(...args);
     });
@@ -665,7 +668,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Git add & commit",
         "Staging and committing changes",
-        gitAddCommit
+        gitAddCommit,
       );
       await cmd.execute(...args);
     });
@@ -677,7 +680,7 @@ async function main() {
       const cmd = createEnhancedCommand(
         "Git add, commit & push",
         "Staging, committing, and pushing changes",
-        gitAddCommitPush
+        gitAddCommitPush,
       );
       await cmd.execute(...args);
     });
@@ -690,7 +693,7 @@ async function main() {
         "Git auto commit",
         "Committing project-specific files",
         gitAutoCommit,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -708,7 +711,7 @@ async function main() {
         "Database status check",
         "Checking database connectivity",
         dbStatus,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -726,7 +729,7 @@ async function main() {
         "Database dump create",
         "Creating database backup",
         dbDumpCreate,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -739,7 +742,7 @@ async function main() {
         "Database dump apply",
         "Applying database dump",
         dbDumpApply,
-        true
+        true,
       );
       await cmd.execute({ version }, ...args);
     });
@@ -758,7 +761,7 @@ async function main() {
         "Database drop all tables",
         "Dropping all database tables",
         dbDropAllTables,
-        true
+        true,
       );
       await cmd.execute(...args);
     });
@@ -769,49 +772,49 @@ async function main() {
     console.log(
       createBox(
         gradientString("blue", "cyan")("💡 Pro Tips") +
-        "\n" +
-        chalk.gray("• Quick: ") +
-        chalk.cyan("dk c") +
-        chalk.gray(", ") +
-        chalk.cyan("dk dr") +
-        "\n" +
-        chalk.gray("• Deploy: ") +
-        chalk.cyan("dk d dev") +
-        "\n" +
-        chalk.gray("• RN Release: ") +
-        chalk.cyan("dk rn br") +
-        "\n" +
-        chalk.gray("• RN Debug: ") +
-        chalk.cyan("dk rn bd") +
-        "\n" +
-        chalk.gray("• No Clean: ") +
-        chalk.cyan("dk rn brnc") +
-        "\n" +
-        chalk.gray("• Spring Boot: ") +
-        chalk.cyan("dk sb start") +
-        "\n" +
-        chalk.gray("• Generators: ") +
-        chalk.cyan("dk gen") +
-        "\n" +
-        chalk.gray("• Git Fix: ") +
-        chalk.cyan("dk git fix") +
-        "\n" +
-        chalk.gray("• Git Add & Commit: ") +
-        chalk.cyan("dk git ac") +
-        "\n" +
-        chalk.gray("• Git Add, Commit & Push: ") +
-        chalk.cyan("dk git acp") +
-        "\n" +
-        chalk.gray("• DB Status: ") +
-        chalk.cyan("dk db status") +
-        "\n" +
-        chalk.gray("• DB Dump: ") +
-        chalk.cyan("dk db dump create") +
-        "\n" +
-        chalk.gray("• Help: ") +
-        chalk.cyan("dk --help"),
-        "blue"
-      )
+          "\n" +
+          chalk.gray("• Quick: ") +
+          chalk.cyan("dk c") +
+          chalk.gray(", ") +
+          chalk.cyan("dk dr") +
+          "\n" +
+          chalk.gray("• Deploy: ") +
+          chalk.cyan("dk d dev") +
+          "\n" +
+          chalk.gray("• RN Release: ") +
+          chalk.cyan("dk rn br") +
+          "\n" +
+          chalk.gray("• RN Debug: ") +
+          chalk.cyan("dk rn bd") +
+          "\n" +
+          chalk.gray("• No Clean: ") +
+          chalk.cyan("dk rn brnc") +
+          "\n" +
+          chalk.gray("• Spring Boot: ") +
+          chalk.cyan("dk sb start") +
+          "\n" +
+          chalk.gray("• Generators: ") +
+          chalk.cyan("dk gen") +
+          "\n" +
+          chalk.gray("• Git Fix: ") +
+          chalk.cyan("dk git fix") +
+          "\n" +
+          chalk.gray("• Git Add & Commit: ") +
+          chalk.cyan("dk git ac") +
+          "\n" +
+          chalk.gray("• Git Add, Commit & Push: ") +
+          chalk.cyan("dk git acp") +
+          "\n" +
+          chalk.gray("• DB Status: ") +
+          chalk.cyan("dk db status") +
+          "\n" +
+          chalk.gray("• DB Dump: ") +
+          chalk.cyan("dk db dump create") +
+          "\n" +
+          chalk.gray("• Help: ") +
+          chalk.cyan("dk --help"),
+        "blue",
+      ),
     );
   });
 
@@ -933,8 +936,8 @@ async function showInteractiveMenu(projectMode: boolean) {
       console.log(
         gradientString(
           "yellow",
-          "orange"
-        )("👋 Thanks for using DK! See you soon! ✨")
+          "orange",
+        )("👋 Thanks for using DK! See you soon! ✨"),
       );
       process.exit(0);
     }
@@ -949,8 +952,8 @@ async function showInteractiveMenu(projectMode: boolean) {
       console.log(
         gradientString(
           "yellow",
-          "orange"
-        )("\n👋 Thanks for using DK! See you soon! ✨")
+          "orange",
+        )("\n👋 Thanks for using DK! See you soon! ✨"),
       );
       process.exit(0);
     }

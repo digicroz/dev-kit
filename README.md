@@ -164,7 +164,6 @@ This file is automatically created and updated during production deployments.
 Before using `dk deploy prod`, ensure you have:
 
 1. **✅ Git Repository**
-
    - Must be a git repository
    - Requires `main` and `stable` branches
 
@@ -179,7 +178,6 @@ Before using `dk deploy prod`, ensure you have:
    ```
 
 3. **✅ Clean Working Directory**
-
    - No uncommitted changes
    - All changes should be committed
 

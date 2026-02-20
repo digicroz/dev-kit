@@ -3,59 +3,59 @@ export type DKProjectType =
   | "vite-react"
   | "react-native-cli"
   | "spring-boot-microservice"
-  | "nextjs"
+  | "nextjs";
 
-export type DatabaseType = "mysql" | "postgres" | "sqlite" | "mongodb"
+export type DatabaseType = "mysql" | "postgres" | "sqlite" | "mongodb";
 
 export interface DatabaseConfig {
-  dumpsDir?: string
-  migrationsDir?: string
-  dbUrlEnvName?: string
-  dbName?: string
-  dbType?: DatabaseType
+  dumpsDir?: string;
+  migrationsDir?: string;
+  dbUrlEnvName?: string;
+  dbName?: string;
+  dbType?: DatabaseType;
 }
 
 export interface SpringBootService {
-  name: string
-  path: string
-  startingOrderIndex: number
+  name: string;
+  path: string;
+  startingOrderIndex: number;
 }
 
 export interface SpringBootConfig {
-  services: SpringBootService[]
-  buildOutDir?: string
+  services: SpringBootService[];
+  buildOutDir?: string;
 }
 
 export interface AssetGeneratorConfig {
-  baseDir: string
-  nameCase?: "kebab-case" | "snake_case" | "any"
-  infoComment?: "hidden" | "short_info"
+  baseDir: string;
+  nameCase?: "kebab-case" | "snake_case" | "any";
+  infoComment?: "hidden" | "short_info";
 }
 
 export interface AssetsGeneratorConfig {
-  baseDir: string
-  publicDir?: string
-  image?: AssetGeneratorConfig
-  svg?: AssetGeneratorConfig
+  baseDir: string;
+  publicDir?: string;
+  image?: AssetGeneratorConfig;
+  svg?: AssetGeneratorConfig;
 }
 
 export interface GeneratorsConfig {
-  assets?: AssetsGeneratorConfig
+  assets?: AssetsGeneratorConfig;
 }
 
 export interface AssetsTypeGeneratorConfig {
-  imagesDir: string
-  imageNameCase?: "kebab-case" | "snake_case" | "any"
-  infoComment?: "hidden" | "short_info"
+  imagesDir: string;
+  imageNameCase?: "kebab-case" | "snake_case" | "any";
+  infoComment?: "hidden" | "short_info";
 }
 
 export interface DKConfig {
-  version: number
-  projectType: DKProjectType
-  database?: DatabaseConfig
-  springBoot?: SpringBootConfig
-  generators?: GeneratorsConfig
-  assetsTypeGenerator?: AssetsTypeGeneratorConfig
+  version: number;
+  projectType: DKProjectType;
+  database?: DatabaseConfig;
+  springBoot?: SpringBootConfig;
+  generators?: GeneratorsConfig;
+  assetsTypeGenerator?: AssetsTypeGeneratorConfig;
 }
 
-export const DK_CONFIG_LATEST_VERSION = 1
+export const DK_CONFIG_LATEST_VERSION = 1;

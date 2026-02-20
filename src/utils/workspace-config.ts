@@ -47,7 +47,7 @@ export function readWorkspaceConfig(): WorkspaceConfig {
 
   if (!existsSync(configPath)) {
     throw new Error(
-      "Workspace config not found. Run 'dk workspace init' first."
+      "Workspace config not found. Run 'dk workspace init' first.",
     );
   }
 

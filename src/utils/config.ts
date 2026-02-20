@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync, readdirSync } from "fs"
-import { join } from "path"
+import { existsSync, readFileSync, writeFileSync, readdirSync } from "fs";
+import { join } from "path";
 import {
   DKConfig,
   DKProjectType,
@@ -9,52 +9,52 @@ import {
   SpringBootConfig,
   GeneratorsConfig,
   AssetsTypeGeneratorConfig,
-} from "../types/config"
+} from "../types/config";
 
-const CONFIG_FILE = "dk.config.json"
+const CONFIG_FILE = "dk.config.json";
 
 export function getConfigPath(rootDir: string = process.cwd()): string {
-  return join(rootDir, CONFIG_FILE)
+  return join(rootDir, CONFIG_FILE);
 }
 
 export function configExists(rootDir: string = process.cwd()): boolean {
-  return existsSync(getConfigPath(rootDir))
+  return existsSync(getConfigPath(rootDir));
 }
 
 export function readConfig(rootDir: string = process.cwd()): DKConfig | null {
-  if (!configExists(rootDir)) return null
-  const raw = readFileSync(getConfigPath(rootDir), "utf8")
-  const config = JSON.parse(raw)
-  return migrateConfigIfNeeded(config)
+  if (!configExists(rootDir)) return null;
+  const raw = readFileSync(getConfigPath(rootDir), "utf8");
+  const config = JSON.parse(raw);
+  return migrateConfigIfNeeded(config);
 }
 
 export function getConfigVersion(config: DKConfig | null): number {
-  if (!config || typeof config.version !== "number") return 0
-  return config.version
+  if (!config || typeof config.version !== "number") return 0;
+  return config.version;
 }
 
 export function isConfigOutdated(config: DKConfig | null): boolean {
-  return getConfigVersion(config) < DK_CONFIG_LATEST_VERSION
+  return getConfigVersion(config) < DK_CONFIG_LATEST_VERSION;
 }
 
 export function writeConfig(
   config: Omit<DKConfig, "version"> & { version?: number },
-  rootDir: string = process.cwd()
+  rootDir: string = process.cwd(),
 ): void {
   const toWrite: DKConfig = {
     version: DK_CONFIG_LATEST_VERSION,
     ...config,
-  }
+  };
   writeFileSync(
     getConfigPath(rootDir),
     JSON.stringify(toWrite, null, 2) + "\n",
-    "utf8"
-  )
+    "utf8",
+  );
 }
 
 // Heuristic project type detection
 export function detectProjectType(
-  rootDir: string = process.cwd()
+  rootDir: string = process.cwd(),
 ): DKProjectType | null {
   // node-express: look for express in package.json deps
   // vite-react: look for vite and react in package.json deps
@@ -64,45 +64,45 @@ export function detectProjectType(
   try {
     // Check for Spring Boot first
     if (detectSpringBootProject(rootDir)) {
-      return "spring-boot-microservice"
+      return "spring-boot-microservice";
     }
 
-    const pkgPath = join(rootDir, "package.json")
-    if (!existsSync(pkgPath)) return null
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies }
-    if (deps["next"]) return "nextjs"
-    if (deps["express"]) return "node-express"
-    if (deps["vite"] && deps["react"]) return "vite-react"
-    if (deps["react-native"]) return "react-native-cli"
+    const pkgPath = join(rootDir, "package.json");
+    if (!existsSync(pkgPath)) return null;
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    if (deps["next"]) return "nextjs";
+    if (deps["express"]) return "node-express";
+    if (deps["vite"] && deps["react"]) return "vite-react";
+    if (deps["react-native"]) return "react-native-cli";
   } catch {}
-  return null
+  return null;
 }
 
 // Detect Spring Boot project structure
 function detectSpringBootProject(rootDir: string): boolean {
   try {
-    const items = readdirSync(rootDir, { withFileTypes: true })
+    const items = readdirSync(rootDir, { withFileTypes: true });
 
     // Look for multiple directories that might be Spring Boot services
     const serviceDirectories = items
       .filter((item) => item.isDirectory())
       .filter((dir) => {
-        const servicePath = join(rootDir, dir.name)
-        const hasPom = existsSync(join(servicePath, "pom.xml"))
+        const servicePath = join(rootDir, dir.name);
+        const hasPom = existsSync(join(servicePath, "pom.xml"));
         const hasGradle =
           existsSync(join(servicePath, "build.gradle")) ||
-          existsSync(join(servicePath, "build.gradle.kts"))
+          existsSync(join(servicePath, "build.gradle.kts"));
         const hasMvnw =
           existsSync(join(servicePath, "mvnw")) ||
-          existsSync(join(servicePath, "mvnw.cmd"))
+          existsSync(join(servicePath, "mvnw.cmd"));
 
-        return hasPom || hasGradle || hasMvnw
-      })
+        return hasPom || hasGradle || hasMvnw;
+      });
 
     // Consider it a Spring Boot microservice project if we have 2+ services
     // or if we have typical microservice directory names
-    if (serviceDirectories.length >= 2) return true
+    if (serviceDirectories.length >= 2) return true;
 
     const microservicePatterns = [
       /.*service.*/,
@@ -114,97 +114,97 @@ function detectSpringBootProject(rootDir: string): boolean {
       /.*user.*/,
       /.*payment.*/,
       /.*transaction.*/,
-    ]
+    ];
 
     return serviceDirectories.some((dir) =>
       microservicePatterns.some((pattern) =>
-        pattern.test(dir.name.toLowerCase())
-      )
-    )
+        pattern.test(dir.name.toLowerCase()),
+      ),
+    );
   } catch {
-    return false
+    return false;
   }
 }
 
 // Database detection for node-express projects
 export function detectDatabaseConfig(
-  rootDir: string = process.cwd()
+  rootDir: string = process.cwd(),
 ): DatabaseConfig | null {
-  const databaseDir = join(rootDir, "database")
+  const databaseDir = join(rootDir, "database");
 
   if (!existsSync(databaseDir)) {
-    return null
+    return null;
   }
 
-  const config: DatabaseConfig = {}
+  const config: DatabaseConfig = {};
 
   try {
     // Check for dumps directory
-    const dumpsDir = join(databaseDir, "dumps")
+    const dumpsDir = join(databaseDir, "dumps");
     if (existsSync(dumpsDir)) {
-      config.dumpsDir = "database/dumps"
+      config.dumpsDir = "database/dumps";
     }
 
     // Check for migrations directory
-    const migrationsDir = join(databaseDir, "migrations")
+    const migrationsDir = join(databaseDir, "migrations");
     if (existsSync(migrationsDir)) {
-      config.migrationsDir = "database/migrations"
+      config.migrationsDir = "database/migrations";
     }
 
     // Check for .env file and database URL
-    const envPath = join(rootDir, ".env")
+    const envPath = join(rootDir, ".env");
     if (existsSync(envPath)) {
-      const envContent = readFileSync(envPath, "utf8")
-      const envConfig = parseEnvForDatabase(envContent)
+      const envContent = readFileSync(envPath, "utf8");
+      const envConfig = parseEnvForDatabase(envContent);
       if (envConfig) {
-        Object.assign(config, envConfig)
+        Object.assign(config, envConfig);
       }
     }
 
-    return Object.keys(config).length > 0 ? config : null
+    return Object.keys(config).length > 0 ? config : null;
   } catch (error) {
-    return null
+    return null;
   }
 }
 
 // Parse .env file for database configuration
 function parseEnvForDatabase(
-  envContent: string
+  envContent: string,
 ): Partial<DatabaseConfig> | null {
-  const lines = envContent.split("\n")
-  const config: Partial<DatabaseConfig> = {}
+  const lines = envContent.split("\n");
+  const config: Partial<DatabaseConfig> = {};
 
   for (const line of lines) {
-    const trimmedLine = line.trim()
-    if (!trimmedLine || trimmedLine.startsWith("#")) continue
+    const trimmedLine = line.trim();
+    if (!trimmedLine || trimmedLine.startsWith("#")) continue;
 
-    const [key, value] = trimmedLine.split("=", 2)
-    if (!key || !value) continue
+    const [key, value] = trimmedLine.split("=", 2);
+    if (!key || !value) continue;
 
     // Look for database URL patterns
     if (key.includes("DATABASE_URL") && value.includes("://")) {
-      config.dbUrlEnvName = key
+      config.dbUrlEnvName = key;
 
       try {
-        const url = new URL(value)
-        const protocol = url.protocol.slice(0, -1) // Remove trailing ':'
+        const url = new URL(value);
+        const protocol = url.protocol.slice(0, -1); // Remove trailing ':'
 
         // Extract database type from protocol
         if (protocol === "mysql") {
-          config.dbType = "mysql"
+          config.dbType = "mysql";
         } else if (protocol === "postgres" || protocol === "postgresql") {
-          config.dbType = "postgres"
+          config.dbType = "postgres";
         } else if (protocol === "sqlite") {
-          config.dbType = "sqlite"
+          config.dbType = "sqlite";
         } else if (protocol === "mongodb" || protocol === "mongo") {
-          config.dbType = "mongodb"
+          config.dbType = "mongodb";
         }
 
         // Extract database name from pathname
         if (url.pathname && url.pathname.length > 1) {
-          const dbName = url.pathname.split("/")[1]?.split("?")[0]
+          const dbName = url.pathname.split("/")[1]?.split("?")[0];
           if (dbName) {
-            config.dbName = dbName
+            config.dbName = dbName;
           }
         }
       } catch (error) {
@@ -213,23 +213,23 @@ function parseEnvForDatabase(
     }
   }
 
-  return Object.keys(config).length > 0 ? config : null
+  return Object.keys(config).length > 0 ? config : null;
 }
 
 export function migrateConfigIfNeeded(config: DKConfig): DKConfig {
   if (!config.assetsTypeGenerator) {
-    return config
+    return config;
   }
 
   if (config.generators?.assets) {
-    return config
+    return config;
   }
 
-  const oldAssets = config.assetsTypeGenerator
-  const imagesDir = oldAssets.imagesDir
+  const oldAssets = config.assetsTypeGenerator;
+  const imagesDir = oldAssets.imagesDir;
 
-  const baseDir = imagesDir.split("/")[0]
-  const imageBaseDir = imagesDir.substring(baseDir.length + 1) || "images"
+  const baseDir = imagesDir.split("/")[0];
+  const imageBaseDir = imagesDir.substring(baseDir.length + 1) || "images";
 
   const newConfig: DKConfig = {
     ...config,
@@ -243,9 +243,9 @@ export function migrateConfigIfNeeded(config: DKConfig): DKConfig {
         },
       },
     },
-  }
+  };
 
-  delete newConfig.assetsTypeGenerator
+  delete newConfig.assetsTypeGenerator;
 
-  return newConfig
+  return newConfig;
 }
