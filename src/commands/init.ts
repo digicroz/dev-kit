@@ -23,6 +23,9 @@ const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
   { name: "React Native CLI", value: "react-native-cli" },
   { name: "Spring Boot Microservices", value: "spring-boot-microservice" },
   { name: "Next.js", value: "nextjs" },
+  { name: "Angular", value: "angular" },
+  { name: "NPM Package", value: "npm-package" },
+  { name: "Unknown", value: "unknown" },
 ];
 
 async function createInitialVSCodeSettings(
@@ -41,7 +44,7 @@ async function createInitialVSCodeSettings(
     try {
       const settingsContent = await fs.readFile(settingsPath, "utf8");
       settings = JSON.parse(settingsContent);
-    } catch (error) {}
+    } catch (error) { }
   }
 
   if (!settings["files.readonlyInclude"]) {
@@ -115,6 +118,7 @@ export async function init() {
       "vite-react",
       "react-native-cli",
       "nextjs",
+      "angular",
     ];
     if (frontendTypes.includes(projectType)) {
       generatorsConfig = await configureGenerators(projectType);
@@ -325,6 +329,7 @@ async function configureGenerators(
     switch (projectType) {
       case "vite-react":
       case "react-native-cli":
+      case "angular":
         defaultBaseDir = "src/assets";
         defaultImageDir = "images";
         break;

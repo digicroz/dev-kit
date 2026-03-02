@@ -185,7 +185,7 @@ export const generateImageIndex = async (): Promise<void> => {
     process.exit(1);
   }
 
-  const supportedTypes = ["vite-react", "react-native-cli", "nextjs"];
+  const supportedTypes = ["vite-react", "react-native-cli", "nextjs", "angular"];
   if (!supportedTypes.includes(config.projectType)) {
     ui.error(
       "Unsupported project type",
@@ -321,7 +321,7 @@ export const generateImageIndex = async (): Promise<void> => {
       } else {
         const varBase = toValidIdentifier(
           [...dirParts, baseNoExt].map(toCamel).filter(Boolean).join("_") ||
-            toCamel(baseNoExt),
+          toCamel(baseNoExt),
         );
         const varName = ensureUnique(varBase || "img", usedVarNames);
 
@@ -360,7 +360,7 @@ export const generateImageIndex = async (): Promise<void> => {
 
         const varBase = toValidIdentifier(
           [...dirParts, baseNoExt].map(toCamel).filter(Boolean).join("_") ||
-            toCamel(baseNoExt),
+          toCamel(baseNoExt),
         );
         const varName = ensureUnique(varBase || "img", usedVarNames);
 

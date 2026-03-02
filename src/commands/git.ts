@@ -469,6 +469,12 @@ export const gitAutoCommit = async () => {
       commitMessage = "prisma and s2s changes";
       break;
 
+    case "npm-package":
+      ui.info("Project type", "npm-package");
+      candidatePaths = ["./prisma", "./src/_s2s", "./dist"];
+      commitMessage = "prisma, s2s and dist changes";
+      break;
+
     case "vite-react":
       ui.info("Project type", "vite-react");
       candidatePaths = ["./b2fPortal"];

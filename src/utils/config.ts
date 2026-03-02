@@ -72,10 +72,11 @@ export function detectProjectType(
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
     if (deps["next"]) return "nextjs";
+    if (deps["@angular/core"]) return "angular";
     if (deps["express"]) return "node-express";
     if (deps["vite"] && deps["react"]) return "vite-react";
     if (deps["react-native"]) return "react-native-cli";
-  } catch {}
+  } catch { }
   return null;
 }
 
