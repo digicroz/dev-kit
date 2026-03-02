@@ -74,8 +74,8 @@
     "unlink": "npm unlink -g @digicroz/dev-kit"
   },
   "dependencies": {
+    "@digicroz/js-kit": "^1.0.11",
     "@types/inquirer": "^9.0.8",
-    "advanced-js-kit": "^1.0.0",
     "boxen": "^8.0.1",
     "chalk": "^5.3.0",
     "cli-spinners": "^3.2.0",
