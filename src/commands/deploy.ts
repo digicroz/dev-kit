@@ -209,36 +209,36 @@ async function promptToCreateBranch(branchName: string): Promise<boolean> {
 }
 
 /**
- * Deploy to development environment
+ * Deploy to UAT environment
  */
-export const deployDev = async () => {
-  console.log(chalk.blue("🚀 Deploying to development environment..."));
+export const deployUat = async () => {
+  console.log(chalk.blue("🚀 Deploying to UAT environment..."));
 
   try {
-    // Check if dev branch exists on remote
-    if (!checkRemoteBranchExists("dev")) {
-      const shouldCreate = await promptToCreateBranch("dev");
+    // Check if uat branch exists on remote
+    if (!checkRemoteBranchExists("uat")) {
+      const shouldCreate = await promptToCreateBranch("uat");
 
       if (shouldCreate) {
-        createAndPublishBranch("dev");
+        createAndPublishBranch("uat");
       } else {
         ui.info(
           "Deployment cancelled",
-          "dev branch is required for development deployment.",
+          "uat branch is required for development deployment.",
         );
         return;
       }
     }
 
     executeCommand(
-      "git push origin main:dev --force",
-      "Failed to push to dev branch",
+      "git push origin main:uat --force",
+      "Failed to push to uat branch",
     );
     console.log(
       chalk.green("✅ Successfully deployed to development environment!"),
     );
   } catch (error) {
-    displayError("Deployment to dev failed.");
+    displayError("Deployment to uat failed.");
   }
 };
 

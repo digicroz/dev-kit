@@ -9,7 +9,7 @@ import gradientString from "gradient-string";
 import ora from "ora";
 
 import { clean } from "../src/commands/clean.js";
-import { deployDev, deployProd } from "../src/commands/deploy.js";
+import { deployUat, deployProd } from "../src/commands/deploy.js";
 import { doctor } from "../src/commands/doctor.js";
 import {
   buildAndroidRelease,
@@ -383,11 +383,11 @@ async function main() {
           name: "environment",
           message: chalk.bold("🎯 Select environment:"),
           choices: [
-            {
+           {
               name:
-                chalk.green("🔧 Development") + chalk.gray(" (quick deploy)"),
-              value: "dev",
-              short: "Development",
+                chalk.green("🔧 UAT") + chalk.gray(" (quick deploy)"),
+              value: "uat",
+              short: "User Acceptance Testing",
             },
             {
               name: chalk.red("🏭 Production") + chalk.gray(" (full pipeline)"),
@@ -395,7 +395,7 @@ async function main() {
               short: "Production",
             },
           ],
-          default: "dev",
+          default: "uat",
         });
 
         const spinner = ora({
@@ -407,9 +407,9 @@ async function main() {
         await new Promise((resolve) => setTimeout(resolve, 800));
         spinner.stop();
 
-        if (environment === "dev") {
+        if (environment === "uat") {
           console.log(chalk.green("✓"), chalk.bold("Deploying to Development"));
-          await deployDev();
+          await deployUat();
         } else {
           console.log(chalk.red("✓"), chalk.bold("Deploying to Production"));
           await deployProd();
@@ -424,13 +424,13 @@ async function main() {
     });
 
   deployCommand
-    .command("dev")
+    .command("uat")
     .description(chalk.gray("🔧 Quick development deploy"))
     .action(async (...args) => {
       const cmd = createEnhancedCommand(
-        "deploy dev",
-        "Deploying to dev",
-        deployDev,
+        "deploy uat",
+        "Deploying to uat",
+        deployUat,
         true,
       );
       await cmd.execute(...args);
@@ -999,7 +999,7 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
           },
         ],
       });
-      if (environment === "dev") await deployDev();
+      if (environment === "dev") await deployUat();
       else await deployProd();
       break;
     case "rn":

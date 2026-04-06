@@ -31,7 +31,7 @@ export const VERSION = getVersionFromPackageJson();
 // Utility functions
 export function getToolkitInfo() {
   return {
-    name: "Advanced Development Kit",
+    name: "Digicroz Development Kit",
     version: VERSION,
     description: "A comprehensive toolkit for modern development workflows",
   };
