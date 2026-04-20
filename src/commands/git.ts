@@ -477,7 +477,7 @@ export const gitAutoCommit = async () => {
 
     case "vite-react":
       ui.info("Project type", "vite-react");
-      candidatePaths = ["./b2fPortal"];
+      candidatePaths = ["./b2fPortal","./_s2c"];
 
       // Format date as DD/MM/YYYY, h:mm:ss am/pm
       const now = new Date();
