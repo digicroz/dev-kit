@@ -10,7 +10,7 @@ export const gen = async (): Promise<void> => {
     process.exit(1);
   }
 
-  const supportedTypes = ["vite-react", "react-native-cli", "nextjs", "angular"];
+  const supportedTypes = ["vite-react", "react-native-cli", "react-native-expo", "nextjs", "angular"];
   if (!supportedTypes.includes(config.projectType)) {
     ui.error(
       "Unsupported project type",

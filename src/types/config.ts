@@ -2,6 +2,7 @@ export type DKProjectType =
   | "node-express"
   | "vite-react"
   | "react-native-cli"
+  | "react-native-expo"
   | "spring-boot-microservice"
   | "nextjs"
   | "angular"

@@ -21,6 +21,7 @@ const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
   { name: "Node.js (Express)", value: "node-express" },
   { name: "Vite + React", value: "vite-react" },
   { name: "React Native CLI", value: "react-native-cli" },
+  { name: "React Native Expo", value: "react-native-expo" },
   { name: "Spring Boot Microservices", value: "spring-boot-microservice" },
   { name: "Next.js", value: "nextjs" },
   { name: "Angular", value: "angular" },
@@ -117,6 +118,7 @@ export async function init() {
     const frontendTypes: DKProjectType[] = [
       "vite-react",
       "react-native-cli",
+      "react-native-expo",
       "nextjs",
       "angular",
     ];
@@ -329,6 +331,7 @@ async function configureGenerators(
     switch (projectType) {
       case "vite-react":
       case "react-native-cli":
+      case "react-native-expo":
       case "angular":
         defaultBaseDir = "src/assets";
         defaultImageDir = "images";

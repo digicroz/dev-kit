@@ -5,6 +5,7 @@ import { existsSync, readFileSync, mkdirSync, copyFileSync } from "fs";
 import { join } from "path";
 import boxen from "boxen";
 import gradientString from "gradient-string";
+import { readConfig } from "../utils/config.js";
 
 // Helper function to get app name from app.json
 function getAppName(): string {
@@ -489,6 +490,51 @@ export async function buildAndroidRelease(
       },
     ),
   );
+
+  const config = readConfig();
+  if (config?.projectType === "react-native-expo") {
+    console.log(
+      boxen(
+        chalk.blue("⚙️ Running Expo Prebuild") +
+          "\n" +
+          chalk.gray("Generating native directories..."),
+        {
+          padding: { top: 0, bottom: 0, left: 1, right: 1 },
+          margin: { top: 1, bottom: 1, left: 0, right: 0 },
+          borderStyle: "round",
+          borderColor: "blue",
+          backgroundColor: "#0a0a1a",
+        },
+      ),
+    );
+
+    const prebuildSpinner = ora({
+      text: chalk.cyan("Running npx expo prebuild..."),
+      spinner: "dots12",
+      color: "cyan",
+    }).start();
+
+    try {
+      execSync("npx expo prebuild", { stdio: "pipe", cwd: process.cwd() });
+      prebuildSpinner.succeed(chalk.green("✓ Expo prebuild completed"));
+    } catch (error: any) {
+      prebuildSpinner.fail(chalk.red("✗ Expo prebuild failed"));
+      console.log(
+        boxen(
+          chalk.red("💥 Prebuild Failed") +
+            "\n" +
+            chalk.white(error.message || "Unknown error occurred"),
+          {
+            padding: { top: 0, bottom: 0, left: 1, right: 1 },
+            borderStyle: "round",
+            borderColor: "red",
+            backgroundColor: "#1a0000",
+          },
+        ),
+      );
+      return;
+    }
+  }
 
   // Perform system check
   performSystemCheck();
