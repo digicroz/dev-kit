@@ -4,7 +4,7 @@ import inquirer from "inquirer";
 import chalk from "chalk";
 import { readConfig } from "../utils/config.js";
 import { DKProjectType } from "../types/config.js";
-import { existsSync } from "fs";
+import { existsSync, readdirSync } from "fs";
 import { resolve } from "path";
 
 type GitConfigScope = "local" | "global" | "both";
@@ -434,6 +434,50 @@ export const gitFix = async () => {
   };
 };
 
+// Resolve glob patterns like "src/*/_prisma" into concrete paths
+// The * wildcard matches any single directory level
+const resolvePathPatterns = (patterns: string[]): string[] => {
+  const resolved: string[] = [];
+
+  for (const pattern of patterns) {
+    if (!pattern.includes("*")) {
+      resolved.push(pattern);
+      continue;
+    }
+
+    const normalized = pattern.replace(/\\/g, "/");
+    const segments = normalized.split("/");
+    const wildcardIndex = segments.findIndex((s) => s === "*");
+
+    if (wildcardIndex === -1) {
+      resolved.push(pattern);
+      continue;
+    }
+
+    const basePath = segments.slice(0, wildcardIndex).join("/");
+    const suffix = segments.slice(wildcardIndex + 1).join("/");
+    const baseFullPath = resolve(process.cwd(), basePath);
+
+    if (!existsSync(baseFullPath)) continue;
+
+    try {
+      const entries = readdirSync(baseFullPath, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const candidatePath = [basePath, entry.name, suffix]
+          .filter(Boolean)
+          .join("/");
+        const fullPath = resolve(process.cwd(), candidatePath);
+        if (existsSync(fullPath)) {
+          resolved.push(`./${candidatePath}`);
+        }
+      }
+    } catch {}
+  }
+
+  return resolved;
+};
+
 export const gitAutoCommit = async () => {
   ui.section("🔄 Git Auto Commit", "Committing project-specific files");
 
@@ -471,8 +515,8 @@ export const gitAutoCommit = async () => {
 
     case "node-fastify":
       ui.info("Project type", "node-fastify");
-      candidatePaths = ["./prisma", "./src/_s2s"];
-      commitMessage = "prisma and s2s changes";
+      candidatePaths = ["src/*/_prisma", "./src/_s2s"];
+      commitMessage = "_prisma and s2s changes";
       break;
 
     case "npm-package":
@@ -508,8 +552,11 @@ export const gitAutoCommit = async () => {
       return { ok: false, error: "unsupported_project_type" };
   }
 
+  // Resolve glob patterns (e.g. src/*/_prisma) into concrete paths
+  const resolvedPaths = resolvePathPatterns(candidatePaths);
+
   // Filter to only paths that exist on disk
-  const existingPaths = candidatePaths.filter((p) => {
+  const existingPaths = resolvedPaths.filter((p) => {
     const fullPath = resolve(process.cwd(), p);
     return existsSync(fullPath);
   });
