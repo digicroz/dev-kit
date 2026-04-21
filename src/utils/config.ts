@@ -57,6 +57,7 @@ export function detectProjectType(
   rootDir: string = process.cwd(),
 ): DKProjectType | null {
   // node-express: look for express in package.json deps
+  // node-fastify: look for fastify in package.json deps
   // vite-react: look for vite and react in package.json deps
   // react-native-cli: look for react-native in package.json deps
   // nextjs: look for next in package.json deps
@@ -74,6 +75,7 @@ export function detectProjectType(
     if (deps["next"]) return "nextjs";
     if (deps["@angular/core"]) return "angular";
     if (deps["express"]) return "node-express";
+    if (deps["fastify"]) return "node-fastify";
     if (deps["vite"] && deps["react"]) return "vite-react";
     if (deps["react-native"]) return "react-native-cli";
   } catch { }
@@ -127,7 +129,7 @@ function detectSpringBootProject(rootDir: string): boolean {
   }
 }
 
-// Database detection for node-express projects
+// Database detection for node-express and node-fastify projects
 export function detectDatabaseConfig(
   rootDir: string = process.cwd(),
 ): DatabaseConfig | null {

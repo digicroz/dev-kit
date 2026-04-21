@@ -1,5 +1,6 @@
 export type DKProjectType =
   | "node-express"
+  | "node-fastify"
   | "vite-react"
   | "react-native-cli"
   | "react-native-expo"

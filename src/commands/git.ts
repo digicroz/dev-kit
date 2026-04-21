@@ -469,6 +469,12 @@ export const gitAutoCommit = async () => {
       commitMessage = "prisma and s2s changes";
       break;
 
+    case "node-fastify":
+      ui.info("Project type", "node-fastify");
+      candidatePaths = ["./prisma", "./src/_s2s"];
+      commitMessage = "prisma and s2s changes";
+      break;
+
     case "npm-package":
       ui.info("Project type", "npm-package");
       candidatePaths = ["./prisma", "./src/_s2s", "./dist"];

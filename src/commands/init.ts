@@ -19,6 +19,7 @@ import type {
 
 const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
   { name: "Node.js (Express)", value: "node-express" },
+  { name: "Node.js (Fastify)", value: "node-fastify" },
   { name: "Vite + React", value: "vite-react" },
   { name: "React Native CLI", value: "react-native-cli" },
   { name: "React Native Expo", value: "react-native-expo" },
@@ -107,7 +108,7 @@ export async function init() {
     let springBootConfig: SpringBootConfig | undefined;
     let generatorsConfig: GeneratorsConfig | undefined;
 
-    if (projectType === "node-express") {
+    if (projectType === "node-express" || projectType === "node-fastify") {
       databaseConfig = await detectAndConfigureDatabase();
     }
 

@@ -99,10 +99,10 @@ export function validateDatabaseSupport(): {
     return { isSupported: false, config: null };
   }
 
-  if (config.projectType !== "node-express") {
+  if (config.projectType !== "node-express" && config.projectType !== "node-fastify") {
     ui.error(
       "Database commands not supported",
-      `Database commands are only available for 'node-express' projects.\nCurrent project type: ${config.projectType}`,
+      `Database commands are only available for 'node-express' or 'node-fastify' projects.\nCurrent project type: ${config.projectType}`,
     );
     return { isSupported: false, config };
   }
