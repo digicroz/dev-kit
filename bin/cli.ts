@@ -15,6 +15,7 @@ import {
   buildAndroidRelease,
   buildAndroidDebug,
 } from "../src/commands/reactNative.js"
+import { dev } from "../src/commands/dev.js"
 import { ui } from "../src/utils/ui-helpers.js"
 import {
   configExists,
@@ -296,6 +297,19 @@ async function main() {
         "clean",
         "Cleaning project",
         clean,
+        true,
+      )
+      await cmd.execute(...args)
+    })
+
+  program
+    .command("dev")
+    .description(chalk.gray("🚀 Start development server"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "dev",
+        "Starting development server",
+        dev,
         true,
       )
       await cmd.execute(...args)
@@ -782,6 +796,9 @@ async function main() {
           chalk.gray(", ") +
           chalk.cyan("dk dr") +
           "\n" +
+          chalk.gray("• Dev: ") +
+          chalk.cyan("dk dev") +
+          "\n" +
           chalk.gray("• Deploy: ") +
           chalk.cyan("dk d dev") +
           "\n" +
@@ -879,7 +896,12 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: "clean",
     },
     {
-      name: "2. 🚀 Deploy - Deploy application",
+      name: "2. 🚀 Dev - Start development server",
+      value: "dev",
+      command: "dev",
+    },
+    {
+      name: "3. 🚀 Deploy - Deploy application",
       value: "deploy",
       command: "deploy",
     },
@@ -978,6 +1000,10 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
     case "clean":
       if (!projectMode) showProjectModeRequired()
       await clean()
+      break
+    case "dev":
+      if (!projectMode) showProjectModeRequired()
+      await dev()
       break
     case "doctor":
       await doctor()

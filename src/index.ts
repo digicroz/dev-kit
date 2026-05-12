@@ -7,6 +7,7 @@ export * from "./commands/clean";
 export * from "./commands/git";
 export * from "./commands/gen";
 export * from "./commands/assets";
+export * from "./commands/dev";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
