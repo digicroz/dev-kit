@@ -96,6 +96,37 @@ const rmPath = async (p: string, isDir: boolean) => {
   }
 }
 
+const clearDirectoryContents = async (directory: string, dryRun: boolean) => {
+  if (dryRun) return { ok: true, files: 0, dirs: 0 }
+
+  const entries = await fs.readdir(directory, { withFileTypes: true })
+  let files = 0
+  let dirs = 0
+
+  for (const entry of entries) {
+    const path = join(directory, entry.name)
+    const res = await rmPath(path, entry.isDirectory())
+    if (res.ok) {
+      if (entry.isDirectory()) dirs++
+      else files++
+    }
+  }
+
+  return { ok: true, files, dirs }
+}
+
+const findDirectories = async (patterns: string[]) => {
+  const matches = await fg(patterns, {
+    dot: true,
+    onlyDirectories: true,
+    unique: true,
+    suppressErrors: true,
+    followSymbolicLinks: false,
+    ignore: ["**/node_modules/**", "**/.git/**"],
+  })
+  return matches
+}
+
 const runGradleClean = (platform: "android" | "ios") =>
   new Promise<void>((resolveDone) => {
     if (platform === "android" && existsSync("android")) {
@@ -125,7 +156,19 @@ export const clean = async () => {
   const dryRun = !!argv["dry-run"]
   const autoYes = !!argv.yes
   const nmOnly = args.includes("nm") || args.includes("node_modules")
+  const s2cOnly = args.includes("s2c")
+  const s2sOnly = args.includes("s2s")
   let cleanedNodeModules = false
+
+  const s2cDirs = s2cOnly
+    ? await findDirectories(["**/*_s2c", "**/b2fPortal"])
+    : []
+  const s2sDirs = s2sOnly ? await findDirectories(["**/*_s2s"]) : []
+
+  const specialCleanDirs = [
+    ...s2cDirs.map((path) => ({ path, type: "s2c" as const })),
+    ...s2sDirs.map((path) => ({ path, type: "s2s" as const })),
+  ]
 
   // Optional node_modules wipe
   if (nmOnly) {
@@ -202,7 +245,8 @@ export const clean = async () => {
     }))
     .filter((e) => withinProject(root, e.path) && existsSync(e.path))
 
-  if (toDelete.length === 0) {
+  const hasSpecialClean = specialCleanDirs.length > 0
+  if (toDelete.length === 0 && !hasSpecialClean) {
     ui.info("Nothing to clean for this mode.")
     return {
       ok: true,
@@ -214,6 +258,14 @@ export const clean = async () => {
   toDelete.forEach((it) => {
     console.log(`  ${it.isDir ? "📁" : "📄"} ${it.path}`)
   })
+
+  if (hasSpecialClean) {
+    specialCleanDirs.forEach((it) => {
+      const label = it.type === "s2c" ? "S2C directory" : "S2S directory"
+      console.log(`  🗂️ Clear contents of ${label}: ${it.path}`)
+    })
+  }
+
   console.log("")
 
   if (!autoYes) {
@@ -250,6 +302,17 @@ export const clean = async () => {
       if (entry.isDir) dirs++
       else files++
       bytes += res.bytes || 0
+    }
+  }
+
+  if (!dryRun && hasSpecialClean) {
+    for (const special of specialCleanDirs) {
+      cleanSpinner.text = `Cleaning contents of ${special.path}...`
+      const res = await clearDirectoryContents(special.path, dryRun)
+      if (res.ok) {
+        dirs += res.dirs
+        files += res.files
+      }
     }
   }
 
