@@ -13,7 +13,7 @@ function getAppName(): string {
     const appJsonPath = join(process.cwd(), "app.json");
     if (existsSync(appJsonPath)) {
       const appJson = JSON.parse(readFileSync(appJsonPath, "utf8"));
-      return appJson.name || appJson.displayName || "ReactNativeApp";
+      return appJson.name || appJson.displayName || appJson.expo.slug || appJson.expo.name || "ReactNativeApp";
     }
 
     // Fallback to package.json if app.json doesn't exist
