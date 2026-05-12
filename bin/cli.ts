@@ -21,6 +21,10 @@ import {
   readConfig,
   isConfigOutdated,
 } from "../src/utils/config.js";
+import {
+  checkDailyUpdate,
+  getUpdateCommandSuggestion,
+} from "../src/utils/version-check.js";
 import { init as runInit } from "../src/commands/init.js";
 import { updateConfig } from "../src/commands/config.js";
 import {
@@ -197,6 +201,8 @@ process.on("uncaughtException", (error) => {
       "#1a0000",
     ),
   );
+  console.log(chalk.gray("If you need the latest DK version, run:"));
+  console.log(chalk.cyan(`  ${getUpdateCommandSuggestion()}`));
   process.exit(1);
 });
 
@@ -219,6 +225,7 @@ async function main() {
     .action(async () => {
       await updateConfig();
     });
+
   // Show banner only at the start
   await showWelcomeBanner();
 
@@ -249,6 +256,8 @@ async function main() {
       );
     }
   }
+
+  await checkDailyUpdate(version);
 
   program
     .name(chalk.bold.cyan("dk"))
