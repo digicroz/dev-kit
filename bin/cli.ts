@@ -1,67 +1,67 @@
-import { Command } from "commander";
-import chalk from "chalk";
-import inquirer from "inquirer";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import boxen from "boxen";
-import gradientString from "gradient-string";
-import ora from "ora";
+import { Command } from "commander"
+import chalk from "chalk"
+import inquirer from "inquirer"
+import { readFileSync } from "fs"
+import { fileURLToPath } from "url"
+import { dirname, join } from "path"
+import boxen from "boxen"
+import gradientString from "gradient-string"
+import ora from "ora"
 
-import { clean } from "../src/commands/clean.js";
-import { deployUat, deployProd } from "../src/commands/deploy.js";
-import { doctor } from "../src/commands/doctor.js";
+import { clean } from "../src/commands/clean.js"
+import { deployUat, deployProd } from "../src/commands/deploy.js"
+import { doctor } from "../src/commands/doctor.js"
 import {
   buildAndroidRelease,
   buildAndroidDebug,
-} from "../src/commands/reactNative.js";
-import { ui } from "../src/utils/ui-helpers.js";
+} from "../src/commands/reactNative.js"
+import { ui } from "../src/utils/ui-helpers.js"
 import {
   configExists,
   readConfig,
   isConfigOutdated,
-} from "../src/utils/config.js";
+} from "../src/utils/config.js"
 import {
   checkDailyUpdate,
   getUpdateCommandSuggestion,
-} from "../src/utils/version-check.js";
-import { init as runInit } from "../src/commands/init.js";
-import { updateConfig } from "../src/commands/config.js";
+} from "../src/utils/version-check.js"
+import { init as runInit } from "../src/commands/init.js"
+import { updateConfig } from "../src/commands/config.js"
 import {
   startSpringBootServices,
   buildSpringBootServices,
-} from "../src/commands/springBoot.js";
-import { gen } from "../src/commands/gen.js";
+} from "../src/commands/springBoot.js"
+import { gen } from "../src/commands/gen.js"
 import {
   gitFix,
   gitAddCommit,
   gitAddCommitPush,
   gitAutoCommit,
-} from "../src/commands/git.js";
+} from "../src/commands/git.js"
 import {
   dbStatus,
   dbDumpCreate,
   dbDumpApply,
   dbDropAllTables,
-} from "../src/commands/database.js";
+} from "../src/commands/database.js"
 import {
   workspace,
   workspaceInit,
   workspaceConfig,
   workspaceList,
-} from "../src/commands/workspace.js";
+} from "../src/commands/workspace.js"
 
 // Get package.json version
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 const packageJson = JSON.parse(
   readFileSync(join(__dirname, "../package.json"), "utf8"),
-);
-const version = packageJson.version;
+)
+const version = packageJson.version
 
 // Beautiful animated welcome banner
 async function showWelcomeBanner() {
-  console.clear();
+  console.clear()
 
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
@@ -78,9 +78,9 @@ async function showWelcomeBanner() {
       borderColor: "cyan",
       backgroundColor: "#0a0a1e",
     },
-  );
+  )
 
-  console.log(welcomeMessage);
+  console.log(welcomeMessage)
 }
 
 // Helper function to create styled boxen messages
@@ -95,12 +95,12 @@ function createBox(
     borderStyle: "round",
     borderColor: color,
     backgroundColor,
-  });
+  })
 }
 
 // Show project mode required error
 function showProjectModeRequired() {
-  console.log("\n");
+  console.log("\n")
   console.log(
     createBox(
       chalk.red("⚠️ Project Mode Required") +
@@ -111,25 +111,25 @@ function showProjectModeRequired() {
       "red",
       "#1a0000",
     ),
-  );
-  process.exit(1);
+  )
+  process.exit(1)
 }
 
 // Handle user cancellation gracefully
 function handleCancellation(commandName: string) {
-  console.log("\n");
+  console.log("\n")
   console.log(
     createBox(
       chalk.yellow("⚠️ ") + chalk.white(`${commandName} cancelled by user`),
       "yellow",
       "#1a1a00",
     ),
-  );
+  )
 }
 
 // Check if error is user cancellation
 function isCancellationError(error: any): boolean {
-  return error.name === "ExitPromptError" || error.message?.includes("SIGINT");
+  return error.name === "ExitPromptError" || error.message?.includes("SIGINT")
 }
 
 // Enhanced command wrapper with loading animation
@@ -145,93 +145,93 @@ function createEnhancedCommand(
     async execute(...args: any[]) {
       // Check if command requires project mode
       if (requiresProject && !configExists()) {
-        showProjectModeRequired();
+        showProjectModeRequired()
       }
 
       const spinner = ora({
         text: chalk.cyan(`Executing ${name}...`),
         spinner: "dots12",
         color: "cyan",
-      }).start();
+      }).start()
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300)); // Brief delay for UX
-        spinner.stop();
-        console.log(chalk.green("✓"), chalk.bold(`${name} ready`));
-        await action(...args);
+        await new Promise((resolve) => setTimeout(resolve, 300)) // Brief delay for UX
+        spinner.stop()
+        console.log(chalk.green("✓"), chalk.bold(`${name} ready`))
+        await action(...args)
       } catch (error: any) {
-        spinner.stop();
+        spinner.stop()
 
         // Handle user cancellation gracefully
         if (isCancellationError(error)) {
-          handleCancellation(name);
-          return;
+          handleCancellation(name)
+          return
         }
 
         // Handle other errors
-        spinner.fail(chalk.red(`Failed to execute ${name}`));
-        console.error(chalk.red("Error:"), error);
-        process.exit(1);
+        spinner.fail(chalk.red(`Failed to execute ${name}`))
+        console.error(chalk.red("Error:"), error)
+        process.exit(1)
       }
     },
-  };
+  }
 }
 
 // Enhanced error handling and beautiful exit
 process.on("SIGINT", () => {
   // Only handle SIGINT if we're not in the middle of a prompt
   if (!process.stdin.isTTY || process.stdin.readableEnded) {
-    console.log("\n");
+    console.log("\n")
     console.log(
       gradientString(
         "yellow",
         "orange",
       )("👋 Thanks for using DK! See you soon! ✨"),
-    );
-    process.exit(0);
+    )
+    process.exit(0)
   }
-});
+})
 
 process.on("uncaughtException", (error) => {
-  console.log("\n");
+  console.log("\n")
   console.log(
     createBox(
       chalk.red("💥 Error: ") + chalk.white(error.message),
       "red",
       "#1a0000",
     ),
-  );
-  console.log(chalk.gray("If you need the latest DK version, run:"));
-  console.log(chalk.cyan(`  ${getUpdateCommandSuggestion()}`));
-  process.exit(1);
-});
+  )
+  console.log(chalk.gray("If you need the latest DK version, run:"))
+  console.log(chalk.cyan(`  ${getUpdateCommandSuggestion()}`))
+  process.exit(1)
+})
 
 // Main execution function
 async function main() {
   // Register config upgrade command
-  const program = new Command();
+  const program = new Command()
 
   // Detect mode: Project Mode or Standalone Mode
-  const projectMode = configExists();
-  const mode = projectMode ? "Project Mode" : "Standalone Mode";
+  const projectMode = configExists()
+  const mode = projectMode ? "Project Mode" : "Standalone Mode"
 
   const configCmd = program
     .command("config")
-    .description(chalk.gray("Manage dk.config.json"));
+    .description(chalk.gray("Manage dk.config.json"))
 
   configCmd
     .command("update")
     .description(chalk.gray("Update dk.config.json to latest version"))
     .action(async () => {
-      await updateConfig();
-    });
+      await updateConfig()
+    })
 
   // Show banner only at the start
-  await showWelcomeBanner();
+  await showWelcomeBanner()
 
   // Display current mode
-  const modeColor = projectMode ? "green" : "yellow";
-  const modeIcon = projectMode ? "📁" : "⚡";
+  const modeColor = projectMode ? "green" : "yellow"
+  const modeIcon = projectMode ? "📁" : "⚡"
   console.log(
     createBox(
       chalk[modeColor](`${modeIcon} ${mode}`) +
@@ -244,20 +244,20 @@ async function main() {
       modeColor,
       projectMode ? "#0a1a0a" : "#1a1a00",
     ),
-  );
+  )
 
   // Check config version and warn if outdated (only in project mode)
   if (projectMode) {
-    const config = readConfig();
+    const config = readConfig()
     if (isConfigOutdated(config)) {
       ui.warning(
         "Your dk.config.json is outdated.",
         "Run 'dk config update' to update your config file.",
-      );
+      )
     }
   }
 
-  await checkDailyUpdate(version);
+  await checkDailyUpdate(version)
 
   program
     .name(chalk.bold.cyan("dk"))
@@ -272,7 +272,7 @@ async function main() {
       commandDescription: (cmd) => "  " + chalk.gray(cmd.description()),
       optionTerm: (option) => chalk.green("  " + option.flags),
       optionDescription: (option) => "  " + chalk.gray(option.description),
-    });
+    })
 
   program
     .command("init")
@@ -283,9 +283,9 @@ async function main() {
         "init",
         "Initializing configuration",
         runInit,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   program
     .command("clean")
@@ -297,28 +297,24 @@ async function main() {
         "Cleaning project",
         clean,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   program
     .command("doctor")
     .alias("dr")
     .description(chalk.gray("🩺 System health check"))
     .action(async (...args) => {
-      const cmd = createEnhancedCommand(
-        "doctor",
-        "Running diagnostics",
-        doctor,
-      );
-      await cmd.execute(...args);
-    });
+      const cmd = createEnhancedCommand("doctor", "Running diagnostics", doctor)
+      await cmd.execute(...args)
+    })
 
   // Workspace commands
   const workspaceCommand = program
     .command("workspace")
     .alias("ws")
-    .description(chalk.gray("💼 Manage workspaces and modules"));
+    .description(chalk.gray("💼 Manage workspaces and modules"))
 
   workspaceCommand
     .command("init")
@@ -328,9 +324,9 @@ async function main() {
         "Workspace init",
         "Initializing workspace configuration",
         workspaceInit,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   workspaceCommand
     .command("config")
@@ -340,9 +336,9 @@ async function main() {
         "Workspace config",
         "Opening workspace configuration",
         workspaceConfig,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   workspaceCommand
     .command("list")
@@ -352,9 +348,9 @@ async function main() {
         "Workspace list",
         "Listing workspaces",
         workspaceList,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   // Default workspace action (interactive selector)
   workspaceCommand.action(async (...args) => {
@@ -362,9 +358,9 @@ async function main() {
       "Workspace",
       "Opening workspace selector",
       workspace,
-    );
-    await cmd.execute(...args);
-  });
+    )
+    await cmd.execute(...args)
+  })
 
   // Enhanced Deploy command with beautiful UI
   const deployCommand = program
@@ -373,7 +369,7 @@ async function main() {
     .description(chalk.gray("🚀 Deploy with confidence"))
     .action(async () => {
       if (!configExists()) {
-        showProjectModeRequired();
+        showProjectModeRequired()
       }
 
       try {
@@ -385,16 +381,15 @@ async function main() {
             "magenta",
             "#0a0a1a",
           ),
-        );
+        )
 
         const { environment } = await inquirer.prompt({
           type: "list",
           name: "environment",
           message: chalk.bold("🎯 Select environment:"),
           choices: [
-           {
-              name:
-                chalk.green("🔧 UAT") + chalk.gray(" (quick deploy)"),
+            {
+              name: chalk.green("🔧 UAT") + chalk.gray(" (quick deploy)"),
               value: "uat",
               short: "User Acceptance Testing",
             },
@@ -405,32 +400,32 @@ async function main() {
             },
           ],
           default: "uat",
-        });
+        })
 
         const spinner = ora({
           text: chalk.cyan(`Preparing ${environment} deployment...`),
           spinner: "dots12",
           color: "cyan",
-        }).start();
+        }).start()
 
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        spinner.stop();
+        await new Promise((resolve) => setTimeout(resolve, 800))
+        spinner.stop()
 
         if (environment === "uat") {
-          console.log(chalk.green("✓"), chalk.bold("Deploying to Development"));
-          await deployUat();
+          console.log(chalk.green("✓"), chalk.bold("Deploying to Development"))
+          await deployUat()
         } else {
-          console.log(chalk.red("✓"), chalk.bold("Deploying to Production"));
-          await deployProd();
+          console.log(chalk.red("✓"), chalk.bold("Deploying to Production"))
+          await deployProd()
         }
       } catch (error: any) {
         if (isCancellationError(error)) {
-          handleCancellation("Deployment");
-          return;
+          handleCancellation("Deployment")
+          return
         }
-        throw error;
+        throw error
       }
-    });
+    })
 
   deployCommand
     .command("uat")
@@ -441,9 +436,9 @@ async function main() {
         "Deploying to uat",
         deployUat,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   deployCommand
     .command("prod")
@@ -454,22 +449,22 @@ async function main() {
         "Deploying to prod",
         deployProd,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   // React Native commands
   const rnCommand = program
     .command("rn")
     .alias("react-native")
-    .description(chalk.gray("📱 React Native tools"));
+    .description(chalk.gray("📱 React Native tools"))
 
   rnCommand
     .command("build")
     .description(chalk.gray("🔨 Build React Native app"))
     .action(async () => {
       if (!configExists()) {
-        showProjectModeRequired();
+        showProjectModeRequired()
       }
 
       try {
@@ -481,7 +476,7 @@ async function main() {
             "green",
             "#0a1a0a",
           ),
-        );
+        )
 
         const { buildType } = await inquirer.prompt({
           type: "list",
@@ -519,25 +514,25 @@ async function main() {
             },
           ],
           default: "android-release",
-        });
+        })
 
         if (buildType === "android-release") {
-          await buildAndroidRelease();
+          await buildAndroidRelease()
         } else if (buildType === "android-release-no-clean") {
-          await buildAndroidRelease(true);
+          await buildAndroidRelease(true)
         } else if (buildType === "android-debug") {
-          await buildAndroidDebug();
+          await buildAndroidDebug()
         } else if (buildType === "android-debug-no-clean") {
-          await buildAndroidDebug(true);
+          await buildAndroidDebug(true)
         }
       } catch (error: any) {
         if (isCancellationError(error)) {
-          handleCancellation("Build");
-          return;
+          handleCancellation("Build")
+          return
         }
-        throw error;
+        throw error
       }
-    });
+    })
 
   rnCommand
     .command("build release")
@@ -549,9 +544,9 @@ async function main() {
         "Building Android release",
         buildAndroidRelease,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   rnCommand
     .command("build release --no-clean")
@@ -563,9 +558,9 @@ async function main() {
         "Building Android release without clean",
         () => buildAndroidRelease(true),
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   rnCommand
     .command("build debug")
@@ -577,9 +572,9 @@ async function main() {
         "Building Android debug",
         buildAndroidDebug,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   rnCommand
     .command("build debug --no-clean")
@@ -591,15 +586,15 @@ async function main() {
         "Building Android debug without clean",
         () => buildAndroidDebug(true),
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   // Spring Boot commands
   const sbCommand = program
     .command("sb")
     .alias("spring-boot")
-    .description(chalk.gray("🍃 Spring Boot microservices tools"));
+    .description(chalk.gray("🍃 Spring Boot microservices tools"))
 
   sbCommand
     .command("start")
@@ -610,9 +605,9 @@ async function main() {
         "Starting microservices",
         startSpringBootServices,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   sbCommand
     .command("build [mode]")
@@ -623,9 +618,9 @@ async function main() {
         "Building microservices",
         () => buildSpringBootServices(mode),
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   program
     .command("gen")
@@ -637,9 +632,9 @@ async function main() {
         "Running all generators",
         gen,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   program
     .command("commit")
@@ -650,13 +645,13 @@ async function main() {
         "Committing project-specific files",
         gitAutoCommit,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   const gitCommand = program
     .command("git")
-    .description(chalk.gray("🔧 Git configuration tools"));
+    .description(chalk.gray("🔧 Git configuration tools"))
 
   gitCommand
     .command("fix")
@@ -666,9 +661,9 @@ async function main() {
         "Git configuration fix",
         "Fixing git ignorecase settings",
         gitFix,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   gitCommand
     .command("ac")
@@ -678,9 +673,9 @@ async function main() {
         "Git add & commit",
         "Staging and committing changes",
         gitAddCommit,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   gitCommand
     .command("acp")
@@ -690,9 +685,9 @@ async function main() {
         "Git add, commit & push",
         "Staging, committing, and pushing changes",
         gitAddCommitPush,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   gitCommand
     .command("commit")
@@ -703,14 +698,14 @@ async function main() {
         "Committing project-specific files",
         gitAutoCommit,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   // Database commands (only for node-express projects)
   const dbCommand = program
     .command("db")
-    .description(chalk.gray("🗃️ Database management tools"));
+    .description(chalk.gray("🗃️ Database management tools"))
 
   dbCommand
     .command("status")
@@ -721,14 +716,14 @@ async function main() {
         "Checking database connectivity",
         dbStatus,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   // Database dump commands
   const dumpCommand = dbCommand
     .command("dump")
-    .description(chalk.gray("💾 Database backup operations"));
+    .description(chalk.gray("💾 Database backup operations"))
 
   dumpCommand
     .command("create")
@@ -739,9 +734,9 @@ async function main() {
         "Creating database backup",
         dbDumpCreate,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   dumpCommand
     .command("apply [version]")
@@ -752,14 +747,14 @@ async function main() {
         "Applying database dump",
         dbDumpApply,
         true,
-      );
-      await cmd.execute({ version }, ...args);
-    });
+      )
+      await cmd.execute({ version }, ...args)
+    })
 
   // Database drop commands
   const dropCommand = dbCommand
     .command("drop")
-    .description(chalk.gray("🗑️ Database destructive operations"));
+    .description(chalk.gray("🗑️ Database destructive operations"))
 
   dropCommand
     .command("all-tables")
@@ -771,13 +766,13 @@ async function main() {
         "Dropping all database tables",
         dbDropAllTables,
         true,
-      );
-      await cmd.execute(...args);
-    });
+      )
+      await cmd.execute(...args)
+    })
 
   // Add help enhancement
   program.on("--help", () => {
-    console.log("\n");
+    console.log("\n")
     console.log(
       createBox(
         gradientString("blue", "cyan")("💡 Pro Tips") +
@@ -824,16 +819,16 @@ async function main() {
           chalk.cyan("dk --help"),
         "blue",
       ),
-    );
-  });
+    )
+  })
 
   // Show interactive menu if no command provided
   if (!process.argv.slice(2).length) {
-    await showInteractiveMenu(projectMode);
-    return;
+    await showInteractiveMenu(projectMode)
+    return
   }
 
-  program.parse(process.argv);
+  program.parse(process.argv)
 }
 
 // Interactive menu when no command is provided
@@ -875,7 +870,7 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: "--help",
     },
     { name: "8. ❌ Exit", value: "exit", command: null },
-  ];
+  ]
 
   const projectCommands = [
     {
@@ -927,9 +922,9 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: "--help",
     },
     { name: "13. ❌ Exit", value: "exit", command: null },
-  ];
+  ]
 
-  const choices = projectMode ? projectCommands : standaloneCommands;
+  const choices = projectMode ? projectCommands : standaloneCommands
 
   try {
     const { selectedCommand } = await inquirer.prompt({
@@ -939,7 +934,7 @@ async function showInteractiveMenu(projectMode: boolean) {
       choices,
       pageSize: 15,
       loop: false,
-    });
+    })
 
     if (selectedCommand === "exit") {
       console.log(
@@ -947,14 +942,14 @@ async function showInteractiveMenu(projectMode: boolean) {
           "yellow",
           "orange",
         )("👋 Thanks for using DK! See you soon! ✨"),
-      );
-      process.exit(0);
+      )
+      process.exit(0)
     }
 
-    const selected = choices.find((c) => c.value === selectedCommand);
+    const selected = choices.find((c) => c.value === selectedCommand)
     if (selected && selected.command) {
-      console.log(chalk.cyan(`\n▶ Running: dk ${selected.command}\n`));
-      await executeCommand(selected.command, projectMode);
+      console.log(chalk.cyan(`\n▶ Running: dk ${selected.command}\n`))
+      await executeCommand(selected.command, projectMode)
     }
   } catch (error: any) {
     if (isCancellationError(error)) {
@@ -963,35 +958,35 @@ async function showInteractiveMenu(projectMode: boolean) {
           "yellow",
           "orange",
         )("\n👋 Thanks for using DK! See you soon! ✨"),
-      );
-      process.exit(0);
+      )
+      process.exit(0)
     }
-    throw error;
+    throw error
   }
 }
 
 // Execute the selected command directly
 async function executeCommand(commandStr: string, projectMode: boolean) {
-  const parts = commandStr.split(" ");
-  const mainCmd = parts[0];
-  const subCmd = parts[1];
+  const parts = commandStr.split(" ")
+  const mainCmd = parts[0]
+  const subCmd = parts[1]
 
   switch (mainCmd) {
     case "init":
-      await runInit();
-      break;
+      await runInit()
+      break
     case "clean":
-      if (!projectMode) showProjectModeRequired();
-      await clean();
-      break;
+      if (!projectMode) showProjectModeRequired()
+      await clean()
+      break
     case "doctor":
-      await doctor();
-      break;
+      await doctor()
+      break
     case "workspace":
-      await workspace();
-      break;
+      await workspace()
+      break
     case "deploy":
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) showProjectModeRequired()
       // Show deploy menu
       const { environment } = await inquirer.prompt({
         type: "list",
@@ -1007,12 +1002,12 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
             value: "prod",
           },
         ],
-      });
-      if (environment === "dev") await deployUat();
-      else await deployProd();
-      break;
+      })
+      if (environment === "dev") await deployUat()
+      else await deployProd()
+      break
     case "rn":
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) showProjectModeRequired()
       // Show RN build menu
       const { buildType } = await inquirer.prompt({
         type: "list",
@@ -1036,41 +1031,41 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
             value: "debug-nc",
           },
         ],
-      });
-      if (buildType === "release") await buildAndroidRelease();
-      else if (buildType === "release-nc") await buildAndroidRelease(true);
-      else if (buildType === "debug") await buildAndroidDebug();
-      else if (buildType === "debug-nc") await buildAndroidDebug(true);
-      break;
+      })
+      if (buildType === "release") await buildAndroidRelease()
+      else if (buildType === "release-nc") await buildAndroidRelease(true)
+      else if (buildType === "debug") await buildAndroidDebug()
+      else if (buildType === "debug-nc") await buildAndroidDebug(true)
+      break
     case "sb":
-      if (!projectMode) showProjectModeRequired();
-      await startSpringBootServices();
-      break;
+      if (!projectMode) showProjectModeRequired()
+      await startSpringBootServices()
+      break
     case "gen":
-      if (!projectMode) showProjectModeRequired();
-      await gen();
-      break;
+      if (!projectMode) showProjectModeRequired()
+      await gen()
+      break
     case "commit":
-      if (!projectMode) showProjectModeRequired();
-      await gitAutoCommit();
-      break;
+      if (!projectMode) showProjectModeRequired()
+      await gitAutoCommit()
+      break
     case "git":
-      if (subCmd === "fix") await gitFix();
-      else if (subCmd === "ac") await gitAddCommit();
-      else if (subCmd === "acp") await gitAddCommitPush();
-      break;
+      if (subCmd === "fix") await gitFix()
+      else if (subCmd === "ac") await gitAddCommit()
+      else if (subCmd === "acp") await gitAddCommitPush()
+      break
     case "db":
-      if (!projectMode) showProjectModeRequired();
-      if (subCmd === "status") await dbStatus();
+      if (!projectMode) showProjectModeRequired()
+      if (subCmd === "status") await dbStatus()
       else if (parts[1] === "dump" && parts[2] === "create")
-        await dbDumpCreate();
-      break;
+        await dbDumpCreate()
+      break
     case "--help":
-      process.argv = ["node", "dk", "--help"];
-      await main();
-      break;
+      process.argv = ["node", "dk", "--help"]
+      await main()
+      break
   }
 }
 
 // Run the main function
-main().catch(console.error);
+main().catch(console.error)
