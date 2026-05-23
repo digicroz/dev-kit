@@ -83,7 +83,7 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
     osType = config.clones[0].os;
   }
 
-  return path.join(baseDir, "digicroz-repot", repoName);
+  return path.join(baseDir, "digicroz-repos", repoName);
 }
 
 export const clone = async (reposUrl?: string) => {
