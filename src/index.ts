@@ -2,7 +2,7 @@
 import { readFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
-
+export * from "./commands/clone"
 export * from "./commands/clean"
 export * from "./commands/git"
 export * from "./commands/gen"

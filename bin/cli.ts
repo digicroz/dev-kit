@@ -51,7 +51,7 @@ import {
   workspaceConfig,
   workspaceList,
 } from "../src/commands/workspace.js"
-
+import {clearCloneConfig,clone} from "../src/commands/clone.js"
 // Get package.json version
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -301,7 +301,41 @@ async function main() {
       )
       await cmd.execute(...args)
     })
+  
 
+const cloneCommand = program
+  .command("clone")
+  .alias("cl")
+  .description(chalk.gray("💼 Manage repositories and clone configuration"))
+
+const configCommand = cloneCommand
+  .command("config")
+    .description(chalk.gray("⚙️ Manage clone configuration"))
+  
+cloneCommand
+  .action(async (...args) => {
+    const cmd = createEnhancedCommand(
+      "clone",
+      "Starting development server",
+      clone,
+      true,
+    );
+    await cmd.execute(...args)
+  })
+
+
+  configCommand
+    .command("clear")
+    .description(chalk.gray("🚀 🧹 Clear saved clone configuration"))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        "clone configuration",
+        "Clear Clone configuration",
+        clearCloneConfig,
+        true,
+      );
+      await cmd.execute(...args)
+    })
   program
     .command("dev")
     .description(chalk.gray("🚀 Start development server"))
@@ -906,6 +940,11 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: "deploy",
     },
     {
+      name: "3. 🚀 Clone - start cloning",
+      value: "clone",
+      command: "Clone",
+    },
+    {
       name: "3. 📱 React Native Build",
       value: "rn:build",
       command: "rn build",
@@ -944,7 +983,7 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: "--help",
     },
     { name: "13. ❌ Exit", value: "exit", command: null },
-  ]
+  ];
 
   const choices = projectMode ? projectCommands : standaloneCommands
 
@@ -1000,6 +1039,17 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
     case "clean":
       if (!projectMode) showProjectModeRequired()
       await clean()
+      break
+     case "clone":
+      const { reposUrl } = await inquirer.prompt({
+        type: "input",
+        name: "reposUrl",
+        message: chalk.bold(
+          "🔗 Enter repository URL :",
+        ),
+      });
+      await clone(reposUrl)
+
       break
     case "dev":
       if (!projectMode) showProjectModeRequired()
