@@ -983,7 +983,7 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: "--help",
     },
     { name: "13. ❌ Exit", value: "exit", command: null },
-  ];
+  ]
 
   const choices = projectMode ? projectCommands : standaloneCommands
 
