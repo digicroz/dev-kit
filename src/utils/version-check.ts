@@ -1,6 +1,6 @@
 import { promises as fs } from "fs"
 import https from "https"
-import os from "os"
+import os from "node:os"
 import { fileURLToPath } from "url"
 import { dirname, join } from "path"
 import { ui } from "./ui-helpers.js"

@@ -1,7 +1,7 @@
 import { exec, execSync } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import inquirer from "inquirer";
-import os from "os";
+import os from "node:os";
 import path, { dirname, join } from "path";
 import { promisify } from "util";
 import { CloneConfig, osTypes } from "../types/clone";
@@ -78,9 +78,6 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
     newConfig.clones.push({ os: osType, baseDir });
     writeCloneConfig(newConfig);
   } else {
-
-
-   
     baseDir = config.clones[0].baseDir;
     osType = config.clones[0].os;
   }
