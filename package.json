@@ -72,13 +72,19 @@
     "deploy:prod": "dk deploy prod",
     "link": "npm run build && npm link",
     "unlink": "npm unlink -g @digicroz/dev-kit",
-    "lint": "eslint . ",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "typecheck": "tsc --noEmit"
   },
   "lint-staged": {
-    "*.{json,md,yml}": [
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
   },
