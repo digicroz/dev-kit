@@ -1,12 +1,12 @@
 // Workspace types for managing multiple projects and modules
 
 export type ActionType =
-  | "open-in-vscode"
-  | "open-in-antigravity"
-  | "run-command"
-  | "run-script"
-  | "open-url"
-  | "open-folder";
+  | 'open-in-vscode'
+  | 'open-in-antigravity'
+  | 'run-command'
+  | 'run-script'
+  | 'open-url'
+  | 'open-folder';
 
 export interface WorkspaceAction {
   type: ActionType;

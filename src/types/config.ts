@@ -1,16 +1,16 @@
 export type DKProjectType =
-  | "node-express"
-  | "node-fastify"
-  | "vite-react"
-  | "react-native-cli"
-  | "react-native-expo"
-  | "spring-boot-microservice"
-  | "nextjs"
-  | "angular"
-  | "unknown"
-  | "npm-package";
+  | 'node-express'
+  | 'node-fastify'
+  | 'vite-react'
+  | 'react-native-cli'
+  | 'react-native-expo'
+  | 'spring-boot-microservice'
+  | 'nextjs'
+  | 'angular'
+  | 'unknown'
+  | 'npm-package';
 
-export type DatabaseType = "mysql" | "postgres" | "sqlite" | "mongodb";
+export type DatabaseType = 'mysql' | 'postgres' | 'sqlite' | 'mongodb';
 
 export interface DatabaseConfig {
   dumpsDir?: string;
@@ -33,8 +33,8 @@ export interface SpringBootConfig {
 
 export interface AssetGeneratorConfig {
   baseDir: string;
-  nameCase?: "kebab-case" | "snake_case" | "any";
-  infoComment?: "hidden" | "short_info";
+  nameCase?: 'kebab-case' | 'snake_case' | 'any';
+  infoComment?: 'hidden' | 'short_info';
 }
 
 export interface AssetsGeneratorConfig {
@@ -50,8 +50,8 @@ export interface GeneratorsConfig {
 
 export interface AssetsTypeGeneratorConfig {
   imagesDir: string;
-  imageNameCase?: "kebab-case" | "snake_case" | "any";
-  infoComment?: "hidden" | "short_info";
+  imageNameCase?: 'kebab-case' | 'snake_case' | 'any';
+  infoComment?: 'hidden' | 'short_info';
 }
 
 export interface DKConfig {

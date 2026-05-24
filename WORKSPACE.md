@@ -166,10 +166,7 @@ Available colors for UI theming:
       "isIncludeByDefault": true,
       "path": "C:/projects/ecommerce/backend",
       "defaultActionIndex": 0,
-      "actions": [
-        { "type": "open-in-vscode" },
-        { "type": "run-command", "command": "npm install" }
-      ]
+      "actions": [{ "type": "open-in-vscode" }, { "type": "run-command", "command": "npm install" }]
     }
   ]
 }
@@ -187,10 +184,7 @@ Available colors for UI theming:
       "isIncludeByDefault": true,
       "path": "C:/projects/services/gateway",
       "defaultActionIndex": 0,
-      "actions": [
-        { "type": "open-in-vscode" },
-        { "type": "run-command", "command": "git status" }
-      ]
+      "actions": [{ "type": "open-in-vscode" }, { "type": "run-command", "command": "git status" }]
     },
     {
       "name": "Auth Service",
