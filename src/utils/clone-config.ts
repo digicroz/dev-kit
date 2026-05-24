@@ -2,8 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { CloneConfig } from "../types/clone";
-import os from "os";
-
+import os from "node:os";
 export function getCloneConfigPath(): string {
   const home = os.homedir();
   const configDir = join(home, ".digicroz", "dk");
