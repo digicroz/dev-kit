@@ -71,7 +71,16 @@
     "deploy:dev": "dk deploy dev",
     "deploy:prod": "dk deploy prod",
     "link": "npm run build && npm link",
-    "unlink": "npm unlink -g @digicroz/dev-kit"
+    "unlink": "npm unlink -g @digicroz/dev-kit",
+    "lint": "eslint . ",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{json,md,yml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@digicroz/js-kit": "^1.0.14",
@@ -99,8 +108,13 @@
     "@types/node": "^24.0.10",
     "@types/pg": "^8.11.10",
     "@types/sqlite3": "^3.1.11",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
+    "prettier": "^3.8.3",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.59.3"
   }
 }

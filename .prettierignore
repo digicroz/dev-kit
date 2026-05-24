@@ -1,0 +1,14 @@
+# Ignore artifacts:
+dist
+node_modules/**
+
+.vscode/**
+.github/**
+prisma/**
+apEmailTemplates/**
+
+
+dist
+node_modules
+coverage
+src/**/_prisma/**
