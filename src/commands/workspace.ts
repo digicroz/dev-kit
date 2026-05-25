@@ -1,11 +1,11 @@
 // Workspace command implementation
-import inquirer from "inquirer";
-import chalk from "chalk";
-import ora from "ora";
-import { existsSync } from "fs";
-import { exec } from "child_process";
-import { promisify } from "util";
-import { ui } from "../utils/ui-helpers.js";
+import inquirer from 'inquirer';
+import chalk from 'chalk';
+import ora from 'ora';
+import { existsSync } from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { ui } from '../utils/ui-helpers.js';
 import {
   getWorkspaceConfigPath,
   workspaceConfigExists,
@@ -13,66 +13,57 @@ import {
   readWorkspaceConfig,
   writeWorkspaceConfig,
   importWorkspaceConfig,
-} from "../utils/workspace-config.js";
-import type {
-  Workspace,
-  WorkspaceModule,
-  WorkspaceAction,
-} from "../types/workspace.js";
+} from '../utils/workspace-config.js';
+import type { Workspace, WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
 
 const execAsync = promisify(exec);
 
 // Initialize workspace configuration
 export async function workspaceInit() {
-  console.log(chalk.cyan("\n🚀 Workspace Configuration Initialization\n"));
+  console.log(chalk.cyan('\n🚀 Workspace Configuration Initialization\n'));
 
   const configExists = workspaceConfigExists();
 
   if (configExists) {
     const { action } = await inquirer.prompt({
-      type: "list",
-      name: "action",
-      message: "Workspace config already exists. What would you like to do?",
+      type: 'list',
+      name: 'action',
+      message: 'Workspace config already exists. What would you like to do?',
       choices: [
-        { name: "Use existing config", value: "use" },
-        { name: "Create new config (overwrites existing)", value: "new" },
-        { name: "Import from another location", value: "import" },
-        { name: "Cancel", value: "cancel" },
+        { name: 'Use existing config', value: 'use' },
+        { name: 'Create new config (overwrites existing)', value: 'new' },
+        { name: 'Import from another location', value: 'import' },
+        { name: 'Cancel', value: 'cancel' },
       ],
     });
 
-    if (action === "cancel") {
-      ui.info("Operation cancelled");
+    if (action === 'cancel') {
+      ui.info('Operation cancelled');
       return;
     }
 
-    if (action === "new") {
+    if (action === 'new') {
       const { confirm } = await inquirer.prompt({
-        type: "confirm",
-        name: "confirm",
-        message: chalk.yellow(
-          "⚠️  This will overwrite your existing config. Continue?",
-        ),
+        type: 'confirm',
+        name: 'confirm',
+        message: chalk.yellow('⚠️  This will overwrite your existing config. Continue?'),
         default: false,
       });
 
       if (!confirm) {
-        ui.info("Operation cancelled");
+        ui.info('Operation cancelled');
         return;
       }
       initWorkspaceConfig();
-      ui.success(
-        "New workspace config created",
-        `Location: ${getWorkspaceConfigPath()}`,
-      );
-    } else if (action === "import") {
+      ui.success('New workspace config created', `Location: ${getWorkspaceConfigPath()}`);
+    } else if (action === 'import') {
       const { filePath } = await inquirer.prompt({
-        type: "input",
-        name: "filePath",
-        message: "Enter the path to the workspace config file:",
+        type: 'input',
+        name: 'filePath',
+        message: 'Enter the path to the workspace config file:',
         validate: (input) => {
-          if (!input) return "Path is required";
-          if (!existsSync(input)) return "File does not exist";
+          if (!input) return 'Path is required';
+          if (!existsSync(input)) return 'File does not exist';
           return true;
         },
       });
@@ -81,47 +72,38 @@ export async function workspaceInit() {
         const importedConfig = importWorkspaceConfig(filePath);
         writeWorkspaceConfig(importedConfig);
         ui.success(
-          "Workspace config imported successfully",
+          'Workspace config imported successfully',
           `Location: ${getWorkspaceConfigPath()}`,
         );
       } catch (error: any) {
-        ui.error("Failed to import config", error.message);
+        ui.error('Failed to import config', error.message);
       }
     } else {
-      ui.info(
-        "Using existing workspace config",
-        `Location: ${getWorkspaceConfigPath()}`,
-      );
+      ui.info('Using existing workspace config', `Location: ${getWorkspaceConfigPath()}`);
     }
   } else {
     initWorkspaceConfig();
-    ui.success(
-      "Workspace config created",
-      `Location: ${getWorkspaceConfigPath()}`,
-    );
+    ui.success('Workspace config created', `Location: ${getWorkspaceConfigPath()}`);
   }
 }
 
 // Open workspace config in VS Code
 export async function workspaceConfig() {
   if (!workspaceConfigExists()) {
-    ui.error(
-      "Workspace config not found",
-      "Run 'dk workspace init' to create one",
-    );
+    ui.error('Workspace config not found', "Run 'dk workspace init' to create one");
     return;
   }
 
   const configPath = getWorkspaceConfigPath();
-  const spinner = ora("Opening config in VS Code...").start();
+  const spinner = ora('Opening config in VS Code...').start();
 
   try {
     await execAsync(`code "${configPath}"`);
-    spinner.succeed("Config opened in VS Code");
+    spinner.succeed('Config opened in VS Code');
   } catch (error: any) {
-    spinner.fail("Failed to open VS Code");
-    ui.error("Error", error.message);
-    ui.info("Config location", configPath);
+    spinner.fail('Failed to open VS Code');
+    ui.error('Error', error.message);
+    ui.info('Config location', configPath);
   }
 }
 
@@ -134,31 +116,27 @@ async function executeAction(
   const actionDesc = action.description || action.type;
 
   switch (action.type) {
-    case "open-in-vscode":
+    case 'open-in-vscode':
       console.log(chalk.gray(`  → Opening ${moduleName} in VS Code...`));
       try {
         await execAsync(`code "${modulePath}"`);
         console.log(chalk.green(`  ✓ Opened ${moduleName} in VS Code`));
       } catch (error: any) {
-        console.log(
-          chalk.red(`  ✗ Failed to open in VS Code: ${error.message}`),
-        );
+        console.log(chalk.red(`  ✗ Failed to open in VS Code: ${error.message}`));
       }
       break;
 
-    case "open-in-antigravity":
+    case 'open-in-antigravity':
       console.log(chalk.gray(`  → Opening ${moduleName} in Antigravity...`));
       try {
         await execAsync(`antigravity "${modulePath}"`);
         console.log(chalk.green(`  ✓ Opened ${moduleName} in Antigravity`));
       } catch (error: any) {
-        console.log(
-          chalk.red(`  ✗ Failed to open in Antigravity: ${error.message}`),
-        );
+        console.log(chalk.red(`  ✗ Failed to open in Antigravity: ${error.message}`));
       }
       break;
 
-    case "run-command":
+    case 'run-command':
       if (!action.command) {
         console.log(chalk.red(`  ✗ No command specified for ${moduleName}`));
         return;
@@ -176,17 +154,15 @@ async function executeAction(
       }
       break;
 
-    case "run-script":
+    case 'run-script':
       if (!action.scriptPath) {
-        console.log(
-          chalk.red(`  ✗ No script path specified for ${moduleName}`),
-        );
+        console.log(chalk.red(`  ✗ No script path specified for ${moduleName}`));
         return;
       }
       console.log(chalk.gray(`  → Running script: ${action.scriptPath}`));
       try {
         // Determine if Windows or Unix
-        const isWindows = process.platform === "win32";
+        const isWindows = process.platform === 'win32';
         const scriptCmd = isWindows
           ? `powershell -ExecutionPolicy Bypass -File "${action.scriptPath}"`
           : `bash "${action.scriptPath}"`;
@@ -202,15 +178,15 @@ async function executeAction(
       }
       break;
 
-    case "open-url":
+    case 'open-url':
       if (!action.url) {
         console.log(chalk.red(`  ✗ No URL specified for ${moduleName}`));
         return;
       }
       console.log(chalk.gray(`  → Opening URL: ${action.url}`));
       try {
-        const isWindows = process.platform === "win32";
-        const isMac = process.platform === "darwin";
+        const isWindows = process.platform === 'win32';
+        const isMac = process.platform === 'darwin';
         const openCmd = isWindows
           ? `start ${action.url}`
           : isMac
@@ -224,11 +200,11 @@ async function executeAction(
       }
       break;
 
-    case "open-folder":
+    case 'open-folder':
       console.log(chalk.gray(`  → Opening folder: ${modulePath}`));
       try {
-        const isWindows = process.platform === "win32";
-        const isMac = process.platform === "darwin";
+        const isWindows = process.platform === 'win32';
+        const isMac = process.platform === 'darwin';
         const openCmd = isWindows
           ? `explorer "${modulePath}"`
           : isMac
@@ -248,10 +224,7 @@ async function executeAction(
 }
 
 // Process selected modules
-async function processModules(
-  modules: WorkspaceModule[],
-  workspaceName: string,
-) {
+async function processModules(modules: WorkspaceModule[], workspaceName: string) {
   console.log(chalk.cyan(`\n📦 Processing ${modules.length} module(s)...\n`));
 
   for (const module of modules) {
@@ -271,37 +244,29 @@ async function processModules(
     }
   }
 
-  console.log(
-    chalk.green(`\n✓ Workspace "${workspaceName}" opened successfully!\n`),
-  );
+  console.log(chalk.green(`\n✓ Workspace "${workspaceName}" opened successfully!\n`));
 }
 
 // Main workspace selector
 export async function workspace() {
   if (!workspaceConfigExists()) {
-    ui.error(
-      "Workspace config not found",
-      "Run 'dk workspace init' to create one",
-    );
+    ui.error('Workspace config not found', "Run 'dk workspace init' to create one");
     return;
   }
 
   const config = readWorkspaceConfig();
 
   if (config.workspaces.length === 0) {
-    ui.warning(
-      "No workspaces configured",
-      "Run 'dk workspace config' to add workspaces",
-    );
+    ui.warning('No workspaces configured', "Run 'dk workspace config' to add workspaces");
     return;
   }
 
   // Show workspace selector
   const workspaceChoices = config.workspaces.map((ws, index) => {
-    const colorFn = (chalk as any)[ws.color || "cyan"] || chalk.cyan;
+    const colorFn = (chalk as any)[ws.color || 'cyan'] || chalk.cyan;
     return {
       name: `${index + 1}. ${colorFn(ws.name)}${
-        ws.description ? chalk.gray(` - ${ws.description}`) : ""
+        ws.description ? chalk.gray(` - ${ws.description}`) : ''
       }`,
       value: ws.name,
       short: ws.name,
@@ -309,45 +274,43 @@ export async function workspace() {
   });
 
   const { selectedWorkspace } = await inquirer.prompt({
-    type: "list",
-    name: "selectedWorkspace",
-    message: chalk.bold("🎯 Select a workspace:"),
+    type: 'list',
+    name: 'selectedWorkspace',
+    message: chalk.bold('🎯 Select a workspace:'),
     choices: workspaceChoices,
     pageSize: 15,
   });
 
-  const workspace = config.workspaces.find(
-    (ws) => ws.name === selectedWorkspace,
-  );
+  const workspace = config.workspaces.find((ws) => ws.name === selectedWorkspace);
 
   if (!workspace) {
-    ui.error("Workspace not found");
+    ui.error('Workspace not found');
     return;
   }
 
   // Ask how to open modules
   const { openMode } = await inquirer.prompt({
-    type: "list",
-    name: "openMode",
-    message: chalk.bold("📂 How would you like to open modules?"),
+    type: 'list',
+    name: 'openMode',
+    message: chalk.bold('📂 How would you like to open modules?'),
     choices: [
-      { name: "Open default modules only", value: "default" },
-      { name: "Open all modules", value: "all" },
-      { name: "Select modules manually", value: "manual" },
-      { name: "Cancel", value: "cancel" },
+      { name: 'Open default modules only', value: 'default' },
+      { name: 'Open all modules', value: 'all' },
+      { name: 'Select modules manually', value: 'manual' },
+      { name: 'Cancel', value: 'cancel' },
     ],
   });
 
-  if (openMode === "cancel") {
-    ui.info("Operation cancelled");
+  if (openMode === 'cancel') {
+    ui.info('Operation cancelled');
     return;
   }
 
   let selectedModules: WorkspaceModule[] = [];
 
-  if (openMode === "default") {
+  if (openMode === 'default') {
     selectedModules = workspace.modules.filter((m) => m.isIncludeByDefault);
-  } else if (openMode === "all") {
+  } else if (openMode === 'all') {
     selectedModules = workspace.modules;
   } else {
     // Manual selection with checkboxes
@@ -358,26 +321,24 @@ export async function workspace() {
     }));
 
     const { selectedModuleNames } = await inquirer.prompt({
-      type: "checkbox",
-      name: "selectedModuleNames",
-      message: chalk.bold("Select modules to open (Space to toggle):"),
+      type: 'checkbox',
+      name: 'selectedModuleNames',
+      message: chalk.bold('Select modules to open (Space to toggle):'),
       choices: moduleChoices,
       pageSize: 15,
       validate: (answer) => {
         if (answer.length < 1) {
-          return "You must select at least one module";
+          return 'You must select at least one module';
         }
         return true;
       },
     });
 
-    selectedModules = workspace.modules.filter((m) =>
-      selectedModuleNames.includes(m.name),
-    );
+    selectedModules = workspace.modules.filter((m) => selectedModuleNames.includes(m.name));
   }
 
   if (selectedModules.length === 0) {
-    ui.warning("No modules selected");
+    ui.warning('No modules selected');
     return;
   }
 
@@ -388,39 +349,29 @@ export async function workspace() {
 // List all workspaces
 export async function workspaceList() {
   if (!workspaceConfigExists()) {
-    ui.error(
-      "Workspace config not found",
-      "Run 'dk workspace init' to create one",
-    );
+    ui.error('Workspace config not found', "Run 'dk workspace init' to create one");
     return;
   }
 
   const config = readWorkspaceConfig();
 
   if (config.workspaces.length === 0) {
-    ui.warning(
-      "No workspaces configured",
-      "Run 'dk workspace config' to add workspaces",
-    );
+    ui.warning('No workspaces configured', "Run 'dk workspace config' to add workspaces");
     return;
   }
 
-  console.log(chalk.cyan("\n📋 Configured Workspaces:\n"));
+  console.log(chalk.cyan('\n📋 Configured Workspaces:\n'));
 
   config.workspaces.forEach((ws, index) => {
-    const colorFn = (chalk as any)[ws.color || "cyan"] || chalk.cyan;
+    const colorFn = (chalk as any)[ws.color || 'cyan'] || chalk.cyan;
     console.log(chalk.bold(`${index + 1}. ${colorFn(ws.name)}`));
     if (ws.description) {
       console.log(chalk.gray(`   ${ws.description}`));
     }
     console.log(chalk.gray(`   Modules: ${ws.modules.length}`));
     ws.modules.forEach((module) => {
-      const defaultTag = module.isIncludeByDefault
-        ? chalk.green(" [default]")
-        : "";
-      console.log(
-        chalk.gray(`   - ${module.name}${defaultTag}: ${module.path}`),
-      );
+      const defaultTag = module.isIncludeByDefault ? chalk.green(' [default]') : '';
+      console.log(chalk.gray(`   - ${module.name}${defaultTag}: ${module.path}`));
     });
     console.log();
   });
