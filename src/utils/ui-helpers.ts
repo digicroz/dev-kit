@@ -1,10 +1,10 @@
-import chalk from "chalk";
-import boxen from "boxen";
-import * as gradientString from "gradient-string";
-import ora, { Ora } from "ora";
-import { execSync } from "child_process";
-import { existsSync, readFileSync } from "fs";
-import path from "path";
+import chalk from 'chalk';
+import boxen from 'boxen';
+import * as gradientString from 'gradient-string';
+import ora, { Ora, Spinner } from 'ora';
+import { execSync } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
+import path from 'path';
 
 /**
  * Enhanced UI helpers with beautiful styling
@@ -27,9 +27,9 @@ export class UIHelper {
    * Create a beautiful success message
    */
   public success(message: string, details?: string): void {
-    console.log(chalk.green("✓"), chalk.bold(message));
+    console.log(chalk.green('✓'), chalk.bold(message));
     if (details) {
-      console.log(chalk.gray("  " + details));
+      console.log(chalk.gray('  ' + details));
     }
   }
 
@@ -37,9 +37,9 @@ export class UIHelper {
    * Create a beautiful error message
    */
   public error(message: string, details?: string): void {
-    console.log(chalk.red("✗"), chalk.bold.red(message));
+    console.log(chalk.red('✗'), chalk.bold.red(message));
     if (details) {
-      console.log(chalk.red("  " + details));
+      console.log(chalk.red('  ' + details));
     }
   }
 
@@ -47,9 +47,9 @@ export class UIHelper {
    * Create a beautiful info message
    */
   public info(message: string, details?: string): void {
-    console.log(chalk.blue("ℹ"), chalk.bold.blue(message));
+    console.log(chalk.blue('ℹ'), chalk.bold.blue(message));
     if (details) {
-      console.log(chalk.gray("  " + details));
+      console.log(chalk.gray('  ' + details));
     }
   }
 
@@ -57,20 +57,20 @@ export class UIHelper {
    * Create a beautiful warning message
    */
   public warning(message: string, details?: string): void {
-    console.log(chalk.yellow("⚠"), chalk.bold.yellow(message));
+    console.log(chalk.yellow('⚠'), chalk.bold.yellow(message));
     if (details) {
-      console.log(chalk.yellow("  " + details));
+      console.log(chalk.yellow('  ' + details));
     }
   }
 
   /**
    * Create a beautiful progress spinner
    */
-  public createSpinner(text: string, spinnerType: string = "dots12"): Ora {
+  public createSpinner(text: string, spinnerType: string = 'dots12'): Ora {
     const spinner = ora({
       text: chalk.cyan(text),
-      spinner: spinnerType as any,
-      color: "cyan",
+      spinner: spinnerType as unknown as Spinner,
+      color: 'cyan',
     });
 
     this.activeSpinners.add(spinner);
@@ -81,45 +81,36 @@ export class UIHelper {
    * Create a beautiful section header
    */
   public section(title: string, subtitle?: string): void {
-    console.log("\n");
-    const content =
-      chalk.bold.white(title) + (subtitle ? "\n" + chalk.gray(subtitle) : "");
+    console.log('\n');
+    const content = chalk.bold.white(title) + (subtitle ? '\n' + chalk.gray(subtitle) : '');
     console.log(
       boxen(content, {
         padding: { top: 0, bottom: 0, left: 1, right: 1 },
-        borderStyle: "round",
-        borderColor: "cyan",
-        backgroundColor: "#001122",
+        borderStyle: 'round',
+        borderColor: 'cyan',
+        backgroundColor: '#001122',
       }),
     );
-    console.log("");
+    console.log('');
   }
 
   /**
    * Create a beautiful gradient text
    */
-  public gradientText(
-    text: string,
-    colors: [string, string] = ["#ff6b6b", "#4ecdc4"],
-  ): string {
+  public gradientText(text: string, colors: [string, string] = ['#ff6b6b', '#4ecdc4']): string {
     return gradientString.rainbow(text);
   }
 
   /**
    * Create a progress bar visualization
    */
-  public progressBar(
-    current: number,
-    total: number,
-    width: number = 20,
-  ): string {
+  public progressBar(current: number, total: number, width: number = 20): string {
     const percentage = Math.round((current / total) * 100);
     const completed = Math.round((width * current) / total);
     const remaining = width - completed;
 
-    const bar =
-      chalk.green("█".repeat(completed)) + chalk.gray("░".repeat(remaining));
-    return `${bar} ${chalk.cyan(percentage + "%")} (${current}/${total})`;
+    const bar = chalk.green('█'.repeat(completed)) + chalk.gray('░'.repeat(remaining));
+    return `${bar} ${chalk.cyan(percentage + '%')} (${current}/${total})`;
   }
 
   /**
@@ -129,12 +120,8 @@ export class UIHelper {
     const maxKeyLength = Math.max(...data.map((item) => item.key.length));
 
     data.forEach((item) => {
-      const padding = " ".repeat(maxKeyLength - item.key.length + 2);
-      console.log(
-        chalk.cyan(item.key) +
-          chalk.gray(padding + "→") +
-          chalk.white(" " + item.value),
-      );
+      const padding = ' '.repeat(maxKeyLength - item.key.length + 2);
+      console.log(chalk.cyan(item.key) + chalk.gray(padding + '→') + chalk.white(' ' + item.value));
     });
   }
 
@@ -154,11 +141,11 @@ export class UIHelper {
    * Create a beautiful banner with ASCII art
    */
   public banner(text: string, subtitle?: string): void {
-    console.log(this.gradientText(text, ["#ff6b6b", "#4ecdc4"]));
+    console.log(this.gradientText(text, ['#ff6b6b', '#4ecdc4']));
     if (subtitle) {
       console.log(chalk.gray(subtitle));
     }
-    console.log("");
+    console.log('');
   }
 
   /**
@@ -166,7 +153,7 @@ export class UIHelper {
    */
   public confirmBox(
     message: string,
-    type: "success" | "warning" | "error" | "info" = "info",
+    type: 'success' | 'warning' | 'error' | 'info' = 'info',
   ): void {
     const colorMap = {
       success: chalk.green,
@@ -176,31 +163,31 @@ export class UIHelper {
     };
 
     const icons = {
-      success: "✓",
-      warning: "⚠",
-      error: "✗",
-      info: "ℹ",
+      success: '✓',
+      warning: '⚠',
+      error: '✗',
+      info: 'ℹ',
     };
 
     const bgColors = {
-      success: "#003300",
-      warning: "#332200",
-      error: "#330000",
-      info: "#000033",
+      success: '#003300',
+      warning: '#332200',
+      error: '#330000',
+      info: '#000033',
     };
 
     const borderColors = {
-      success: "green",
-      warning: "yellow",
-      error: "red",
-      info: "blue",
+      success: 'green',
+      warning: 'yellow',
+      error: 'red',
+      info: 'blue',
     };
 
     console.log(
-      boxen(colorMap[type](icons[type] + " ") + chalk.bold.white(message), {
+      boxen(colorMap[type](icons[type] + ' ') + chalk.bold.white(message), {
         padding: 1,
         margin: { top: 1, bottom: 1, left: 0, right: 0 },
-        borderStyle: "round",
+        borderStyle: 'round',
         borderColor: borderColors[type],
         backgroundColor: bgColors[type],
       }),
@@ -210,44 +197,41 @@ export class UIHelper {
   /**
    * Check if a config file exists for a tool
    */
-  private hasConfigFile(
-    tool: "eslint" | "prettier",
-    projectRoot: string,
-  ): boolean {
+  private hasConfigFile(tool: 'eslint' | 'prettier', projectRoot: string): boolean {
     const eslintConfigs = [
-      ".eslintrc.js",
-      ".eslintrc.cjs",
-      ".eslintrc.yaml",
-      ".eslintrc.yml",
-      ".eslintrc.json",
-      ".eslintrc",
-      "eslint.config.js",
-      "eslint.config.mjs",
-      "eslint.config.cjs",
+      '.eslintrc.js',
+      '.eslintrc.cjs',
+      '.eslintrc.yaml',
+      '.eslintrc.yml',
+      '.eslintrc.json',
+      '.eslintrc',
+      'eslint.config.js',
+      'eslint.config.mjs',
+      'eslint.config.cjs',
     ];
     const prettierConfigs = [
-      ".prettierrc",
-      ".prettierrc.json",
-      ".prettierrc.yml",
-      ".prettierrc.yaml",
-      ".prettierrc.js",
-      ".prettierrc.cjs",
-      ".prettierrc.mjs",
-      ".prettierrc.toml",
-      "prettier.config.js",
-      "prettier.config.cjs",
-      "prettier.config.mjs",
+      '.prettierrc',
+      '.prettierrc.json',
+      '.prettierrc.yml',
+      '.prettierrc.yaml',
+      '.prettierrc.js',
+      '.prettierrc.cjs',
+      '.prettierrc.mjs',
+      '.prettierrc.toml',
+      'prettier.config.js',
+      'prettier.config.cjs',
+      'prettier.config.mjs',
     ];
 
-    const configs = tool === "eslint" ? eslintConfigs : prettierConfigs;
+    const configs = tool === 'eslint' ? eslintConfigs : prettierConfigs;
 
     // Also check package.json for config
-    const packageJsonPath = path.join(projectRoot, "package.json");
+    const packageJsonPath = path.join(projectRoot, 'package.json');
     if (existsSync(packageJsonPath)) {
       try {
-        const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-        if (tool === "eslint" && packageJson.eslintConfig) return true;
-        if (tool === "prettier" && packageJson.prettier) return true;
+        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+        if (tool === 'eslint' && packageJson.eslintConfig) return true;
+        if (tool === 'prettier' && packageJson.prettier) return true;
       } catch (error) {
         // Ignore JSON parse errors
       }
@@ -263,48 +247,45 @@ export class UIHelper {
     filePath: string,
     projectRoot: string = process.cwd(),
   ): Promise<void> {
-    const hasEslint = this.hasConfigFile("eslint", projectRoot);
-    const hasPrettier = this.hasConfigFile("prettier", projectRoot);
+    const hasEslint = this.hasConfigFile('eslint', projectRoot);
+    const hasPrettier = this.hasConfigFile('prettier', projectRoot);
 
     if (!hasEslint && !hasPrettier) {
       return; // No formatting tools configured
     }
 
-    const spinner = this.createSpinner("Formatting generated file...");
+    const spinner = this.createSpinner('Formatting generated file...');
     spinner.start();
 
     try {
       if (hasEslint) {
-        spinner.text = "Running ESLint...";
+        spinner.text = 'Running ESLint...';
         try {
           execSync(`npx eslint --fix "${filePath}"`, {
-            stdio: "pipe",
+            stdio: 'pipe',
             cwd: projectRoot,
           });
-          this.info("ESLint formatting applied");
+          this.info('ESLint formatting applied');
         } catch (error) {
           // ESLint might exit with code 1 even when fixing issues successfully
           // Only show error if it's a real error, not just warnings/fixes
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          if (!errorMessage.includes("--fix")) {
-            this.warning(
-              "ESLint encountered some issues but file was processed",
-            );
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (!errorMessage.includes('--fix')) {
+            this.warning('ESLint encountered some issues but file was processed');
           }
         }
       }
 
       if (hasPrettier) {
-        spinner.text = "Running Prettier...";
+        spinner.text = 'Running Prettier...';
         try {
           execSync(`npx prettier --write "${filePath}"`, {
-            stdio: "pipe",
+            stdio: 'pipe',
             cwd: projectRoot,
           });
-          this.info("Prettier formatting applied");
+          this.info('Prettier formatting applied');
         } catch (error) {
-          this.warning("Prettier encountered issues but file was processed");
+          this.warning('Prettier encountered issues but file was processed');
         }
       }
 
@@ -312,18 +293,18 @@ export class UIHelper {
 
       if (hasEslint || hasPrettier) {
         const tools = [];
-        if (hasEslint) tools.push("ESLint");
-        if (hasPrettier) tools.push("Prettier");
+        if (hasEslint) tools.push('ESLint');
+        if (hasPrettier) tools.push('Prettier');
         this.success(
-          "Code formatting completed",
-          `Applied ${tools.join(" and ")} to generated file`,
+          'Code formatting completed',
+          `Applied ${tools.join(' and ')} to generated file`,
         );
       }
     } catch (error) {
-      spinner.fail("Formatting failed");
+      spinner.fail('Formatting failed');
       this.warning(
-        "Code formatting encountered issues",
-        error instanceof Error ? error.message : "Unknown error",
+        'Code formatting encountered issues',
+        error instanceof Error ? error.message : 'Unknown error',
       );
     }
   }

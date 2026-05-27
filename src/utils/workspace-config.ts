@@ -1,14 +1,14 @@
 // Workspace configuration management
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { homedir } from "os";
-import { join, dirname } from "path";
-import type { WorkspaceConfig } from "../types/workspace.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { homedir } from 'os';
+import { join, dirname } from 'path';
+import type { WorkspaceConfig } from '../types/workspace.js';
 
 // Get the workspace config file path based on OS
 export function getWorkspaceConfigPath(): string {
   const home = homedir();
-  const configDir = join(home, ".digicroz", "dk");
-  return join(configDir, "workspaces.config.json");
+  const configDir = join(home, '.digicroz', 'dk');
+  return join(configDir, 'workspaces.config.json');
 }
 
 // Check if workspace config exists
@@ -19,7 +19,7 @@ export function workspaceConfigExists(): boolean {
 // Create default workspace config
 function createDefaultConfig(): WorkspaceConfig {
   return {
-    version: "1.0.0",
+    version: '1.0.0',
     workspaces: [],
   };
 }
@@ -37,7 +37,7 @@ export function initWorkspaceConfig(): void {
   // Create config file if it doesn't exist
   if (!existsSync(configPath)) {
     const defaultConfig = createDefaultConfig();
-    writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2), "utf-8");
+    writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2), 'utf-8');
   }
 }
 
@@ -46,13 +46,11 @@ export function readWorkspaceConfig(): WorkspaceConfig {
   const configPath = getWorkspaceConfigPath();
 
   if (!existsSync(configPath)) {
-    throw new Error(
-      "Workspace config not found. Run 'dk workspace init' first.",
-    );
+    throw new Error("Workspace config not found. Run 'dk workspace init' first.");
   }
 
   try {
-    const content = readFileSync(configPath, "utf-8");
+    const content = readFileSync(configPath, 'utf-8');
     return JSON.parse(content) as WorkspaceConfig;
   } catch (error) {
     throw new Error(`Failed to read workspace config: ${error}`);
@@ -70,14 +68,14 @@ export function writeWorkspaceConfig(config: WorkspaceConfig): void {
   }
 
   try {
-    writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
   } catch (error) {
     throw new Error(`Failed to write workspace config: ${error}`);
   }
 }
 
 // Validate workspace config structure
-export function validateWorkspaceConfig(config: any): boolean {
+export function validateWorkspaceConfig(config: WorkspaceConfig): boolean {
   if (!config.version || !config.workspaces) {
     return false;
   }
@@ -114,11 +112,11 @@ export function importWorkspaceConfig(filePath: string): WorkspaceConfig {
   }
 
   try {
-    const content = readFileSync(filePath, "utf-8");
+    const content = readFileSync(filePath, 'utf-8');
     const config = JSON.parse(content) as WorkspaceConfig;
 
     if (!validateWorkspaceConfig(config)) {
-      throw new Error("Invalid workspace config structure");
+      throw new Error('Invalid workspace config structure');
     }
 
     return config;
