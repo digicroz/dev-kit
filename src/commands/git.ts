@@ -503,6 +503,12 @@ export const gitAutoCommit = async () => {
       commitMessage = 'prisma, s2s and dist changes';
       break;
 
+    case 'react-native-expo':
+      ui.info('Project type', 'react-native-expo');
+      candidatePaths = ['./b2fPortal', './_s2c'];
+      commitMessage = 's2c changes';
+      break;
+
     case 'vite-react':
       ui.info('Project type', 'vite-react');
       candidatePaths = ['./b2fPortal', './_s2c'];
