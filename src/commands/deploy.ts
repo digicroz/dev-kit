@@ -11,6 +11,21 @@ interface DeployInfo {
   version: string;
 }
 
+interface PackageJson {
+  name?: string;
+  version?: string;
+  [key: string]: unknown;
+}
+
+interface DkConfig {
+  deploy?: {
+    uat?: string | string[];
+    prod?: string | string[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 /**
  * Display error message and exit
  */
@@ -48,11 +63,11 @@ function getPackageJsonPath(): string {
 /**
  * Read and parse package.json
  */
-function readPackageJson(): any {
+function readPackageJson(): PackageJson {
   const packagePath = getPackageJsonPath();
   try {
     const content = fs.readFileSync(packagePath, 'utf8');
-    return JSON.parse(content);
+    return JSON.parse(content) as PackageJson;
   } catch (error) {
     displayError('Failed to read or parse package.json.');
   }
@@ -61,7 +76,7 @@ function readPackageJson(): any {
 /**
  * Write package.json
  */
-function writePackageJson(packageData: any): void {
+function writePackageJson(packageData: PackageJson): void {
   const packagePath = getPackageJsonPath();
   try {
     fs.writeFileSync(packagePath, JSON.stringify(packageData, null, 2) + '\n');
@@ -87,6 +102,39 @@ function readDeployInfo(): DeployInfo | null {
       chalk.yellow('Warning: Failed to read deploy.json, treating as first deployment.'),
     );
     return null;
+  }
+}
+
+/**
+ * Read dk.config.json if it exists and return parsed object
+ */
+function readDkConfig(): DkConfig | null {
+  const cfgPath = path.join(process.cwd(), 'dk.config.json');
+  if (!fs.existsSync(cfgPath)) return null;
+
+  try {
+    const content = fs.readFileSync(cfgPath, 'utf8');
+    return JSON.parse(content) as DkConfig;
+  } catch (error) {
+    console.warn(chalk.yellow('Warning: Failed to read dk.config.json, ignoring.'));
+    return null;
+  }
+}
+
+/**
+ * Run one or more custom commands (string or array) with output streamed to console
+ */
+function runCustomCommands(commands: string | string[], envName: string) {
+  const cmds = Array.isArray(commands) ? commands : [commands];
+
+  ui.info(`Running custom deploy commands for ${envName}`, cmds.join(' && '));
+
+  for (const cmd of cmds) {
+    try {
+      execSync(cmd, { stdio: 'inherit' });
+    } catch (error) {
+      displayError(`Custom command failed (${cmd}): ${error}`);
+    }
   }
 }
 
@@ -205,6 +253,13 @@ async function promptToCreateBranch(branchName: string): Promise<boolean> {
 export const deployUat = async () => {
   console.log(chalk.blue('🚀 Deploying to UAT environment...'));
 
+  // If dk.config.json provides custom deploy commands for uat, run them instead
+  const dkConfig = readDkConfig();
+  if (dkConfig?.deploy?.uat) {
+    runCustomCommands(dkConfig.deploy.uat, 'uat');
+    return;
+  }
+
   try {
     // Check if uat branch exists on remote
     if (!checkRemoteBranchExists('uat')) {
@@ -230,6 +285,13 @@ export const deployUat = async () => {
  */
 export const deployProd = async () => {
   console.log(chalk.blue('🚀 Starting production deployment...'));
+
+  // If dk.config.json provides custom deploy commands for prod, run them instead
+  const dkConfig = readDkConfig();
+  if (dkConfig?.deploy?.prod) {
+    runCustomCommands(dkConfig.deploy.prod, 'prod');
+    return;
+  }
 
   // Check if stable branch exists on remote
   if (!checkRemoteBranchExists('stable')) {

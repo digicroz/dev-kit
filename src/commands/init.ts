@@ -81,7 +81,7 @@ export async function init() {
     return;
   }
 
-  let detected = detectProjectType();
+  const detected = detectProjectType();
   let projectType: DKProjectType | undefined = detected || undefined;
 
   if (!projectType) {
@@ -247,7 +247,7 @@ async function detectAndConfigureDatabase(): Promise<DatabaseConfig | undefined>
     return undefined;
   }
 
-  let config = { ...detectedConfig };
+  const config = { ...detectedConfig };
 
   // If database type couldn't be detected from env, ask user
   if (config.dbUrlEnvName && !config.dbType) {

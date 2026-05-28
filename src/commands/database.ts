@@ -1071,7 +1071,7 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
       const [tables] = (await connection.execute(`SHOW TABLES`)) as any[];
 
       let droppedCount = 0;
-      let failedTables: string[] = [];
+      const failedTables: string[] = [];
 
       // Drop each table
       for (const tableRow of tables) {
