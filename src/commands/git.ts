@@ -1,36 +1,36 @@
-import { ui } from "../utils/ui-helpers.js";
-import { spawn } from "child_process";
-import inquirer from "inquirer";
-import chalk from "chalk";
-import { readConfig } from "../utils/config.js";
-import { DKProjectType } from "../types/config.js";
-import { existsSync, readdirSync } from "fs";
-import { resolve } from "path";
+import { ui } from '../utils/ui-helpers.js';
+import { spawn } from 'child_process';
+import inquirer from 'inquirer';
+import chalk from 'chalk';
+import { readConfig } from '../utils/config.js';
+import { DKProjectType } from '../types/config.js';
+import { existsSync, readdirSync } from 'fs';
+import { resolve } from 'path';
 
-type GitConfigScope = "local" | "global" | "both";
+type GitConfigScope = 'local' | 'global' | 'both';
 
 const runGitCommand = (
   args: string[],
   cwd?: string,
 ): Promise<{ success: boolean; output: string; error?: string }> => {
   return new Promise((resolve) => {
-    const child = spawn("git", args, {
+    const child = spawn('git', args, {
       cwd: cwd || process.cwd(),
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    let stdout = "";
-    let stderr = "";
+    let stdout = '';
+    let stderr = '';
 
-    child.stdout?.on("data", (data) => {
+    child.stdout?.on('data', (data) => {
       stdout += data.toString();
     });
 
-    child.stderr?.on("data", (data) => {
+    child.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
-    child.on("close", (code) => {
+    child.on('close', (code) => {
       resolve({
         success: code === 0,
         output: stdout.trim(),
@@ -38,86 +38,81 @@ const runGitCommand = (
       });
     });
 
-    child.on("error", (error) => {
+    child.on('error', (error) => {
       resolve({
         success: false,
-        output: "",
+        output: '',
         error: error.message,
       });
     });
   });
 };
 
-const setIgnoreCase = async (scope: "local" | "global"): Promise<boolean> => {
-  const args = ["config"];
-  if (scope === "global") {
-    args.push("--global");
+const setIgnoreCase = async (scope: 'local' | 'global'): Promise<boolean> => {
+  const args = ['config'];
+  if (scope === 'global') {
+    args.push('--global');
   }
-  args.push("core.ignorecase", "false");
+  args.push('core.ignorecase', 'false');
 
   const result = await runGitCommand(args);
   return result.success;
 };
 
-const checkIgnoreCase = async (
-  scope: "local" | "global",
-): Promise<string | null> => {
-  const args = ["config"];
-  if (scope === "global") {
-    args.push("--global");
+const checkIgnoreCase = async (scope: 'local' | 'global'): Promise<string | null> => {
+  const args = ['config'];
+  if (scope === 'global') {
+    args.push('--global');
   }
-  args.push("core.ignorecase");
+  args.push('core.ignorecase');
 
   const result = await runGitCommand(args);
   return result.success ? result.output : null;
 };
 
 export const gitAddCommit = async () => {
-  ui.section("📝 Git Add & Commit", "Stage all changes and commit");
+  ui.section('📝 Git Add & Commit', 'Stage all changes and commit');
 
-  const gitStatusResult = await runGitCommand(["status", "--porcelain"]);
+  const gitStatusResult = await runGitCommand(['status', '--porcelain']);
   const isGitRepo = gitStatusResult.success;
 
   if (!isGitRepo) {
-    ui.error(
-      "Not in a git repository",
-      "Please run this command from a git repository.",
-    );
-    return { ok: false, error: "not_git_repo" };
+    ui.error('Not in a git repository', 'Please run this command from a git repository.');
+    return { ok: false, error: 'not_git_repo' };
   }
 
   if (!gitStatusResult.output) {
-    ui.info("No changes to commit", "Working tree is clean.");
+    ui.info('No changes to commit', 'Working tree is clean.');
     return { ok: true, noChanges: true };
   }
 
-  console.log(chalk.gray("\nCurrent changes:"));
+  console.log(chalk.gray('\nCurrent changes:'));
   console.log(gitStatusResult.output);
-  console.log("");
+  console.log('');
 
-  const addSpinner = ui.createSpinner("Staging all changes...");
+  const addSpinner = ui.createSpinner('Staging all changes...');
   addSpinner.start();
 
-  const addResult = await runGitCommand(["add", "."]);
+  const addResult = await runGitCommand(['add', '.']);
   addSpinner.stop();
 
   if (!addResult.success) {
-    ui.error("Failed to stage changes", addResult.error || "Unknown error");
-    return { ok: false, error: "add_failed" };
+    ui.error('Failed to stage changes', addResult.error || 'Unknown error');
+    return { ok: false, error: 'add_failed' };
   }
 
-  ui.success("Changes staged", "All changes have been added.");
+  ui.success('Changes staged', 'All changes have been added.');
 
-  let commitMessage = "";
+  let commitMessage = '';
   while (!commitMessage.trim()) {
     const { message } = await inquirer.prompt({
-      type: "input",
-      name: "message",
-      message: chalk.bold("📝 Enter commit message:"),
+      type: 'input',
+      name: 'message',
+      message: chalk.bold('📝 Enter commit message:'),
       validate: (input: string) => {
         const trimmed = input.trim();
         if (!trimmed) {
-          return "Commit message cannot be empty. Please enter a message.";
+          return 'Commit message cannot be empty. Please enter a message.';
         }
         return true;
       },
@@ -125,21 +120,21 @@ export const gitAddCommit = async () => {
     commitMessage = message.trim();
   }
 
-  const commitSpinner = ui.createSpinner("Committing changes...");
+  const commitSpinner = ui.createSpinner('Committing changes...');
   commitSpinner.start();
 
-  const commitResult = await runGitCommand(["commit", "-m", commitMessage]);
+  const commitResult = await runGitCommand(['commit', '-m', commitMessage]);
   commitSpinner.stop();
 
   if (!commitResult.success) {
-    ui.error("Failed to commit changes", commitResult.error || "Unknown error");
-    return { ok: false, error: "commit_failed" };
+    ui.error('Failed to commit changes', commitResult.error || 'Unknown error');
+    return { ok: false, error: 'commit_failed' };
   }
 
-  ui.success("Commit successful!", commitMessage);
+  ui.success('Commit successful!', commitMessage);
 
   if (commitResult.output) {
-    console.log("");
+    console.log('');
     console.log(chalk.gray(commitResult.output));
   }
 
@@ -150,54 +145,48 @@ export const gitAddCommit = async () => {
 };
 
 export const gitAddCommitPush = async () => {
-  ui.section(
-    "🚀 Git Add, Commit & Push",
-    "Stage, commit, and push all changes",
-  );
+  ui.section('🚀 Git Add, Commit & Push', 'Stage, commit, and push all changes');
 
-  const gitStatusResult = await runGitCommand(["status", "--porcelain"]);
+  const gitStatusResult = await runGitCommand(['status', '--porcelain']);
   const isGitRepo = gitStatusResult.success;
 
   if (!isGitRepo) {
-    ui.error(
-      "Not in a git repository",
-      "Please run this command from a git repository.",
-    );
-    return { ok: false, error: "not_git_repo" };
+    ui.error('Not in a git repository', 'Please run this command from a git repository.');
+    return { ok: false, error: 'not_git_repo' };
   }
 
   if (!gitStatusResult.output) {
-    ui.info("No changes to commit", "Working tree is clean.");
+    ui.info('No changes to commit', 'Working tree is clean.');
     return { ok: true, noChanges: true };
   }
 
-  console.log(chalk.gray("\nCurrent changes:"));
+  console.log(chalk.gray('\nCurrent changes:'));
   console.log(gitStatusResult.output);
-  console.log("");
+  console.log('');
 
-  const addSpinner = ui.createSpinner("Staging all changes...");
+  const addSpinner = ui.createSpinner('Staging all changes...');
   addSpinner.start();
 
-  const addResult = await runGitCommand(["add", "."]);
+  const addResult = await runGitCommand(['add', '.']);
   addSpinner.stop();
 
   if (!addResult.success) {
-    ui.error("Failed to stage changes", addResult.error || "Unknown error");
-    return { ok: false, error: "add_failed" };
+    ui.error('Failed to stage changes', addResult.error || 'Unknown error');
+    return { ok: false, error: 'add_failed' };
   }
 
-  ui.success("Changes staged", "All changes have been added.");
+  ui.success('Changes staged', 'All changes have been added.');
 
-  let commitMessage = "";
+  let commitMessage = '';
   while (!commitMessage.trim()) {
     const { message } = await inquirer.prompt({
-      type: "input",
-      name: "message",
-      message: chalk.bold("📝 Enter commit message:"),
+      type: 'input',
+      name: 'message',
+      message: chalk.bold('📝 Enter commit message:'),
       validate: (input: string) => {
         const trimmed = input.trim();
         if (!trimmed) {
-          return "Commit message cannot be empty. Please enter a message.";
+          return 'Commit message cannot be empty. Please enter a message.';
         }
         return true;
       },
@@ -205,43 +194,43 @@ export const gitAddCommitPush = async () => {
     commitMessage = message.trim();
   }
 
-  const commitSpinner = ui.createSpinner("Committing changes...");
+  const commitSpinner = ui.createSpinner('Committing changes...');
   commitSpinner.start();
 
-  const commitResult = await runGitCommand(["commit", "-m", commitMessage]);
+  const commitResult = await runGitCommand(['commit', '-m', commitMessage]);
   commitSpinner.stop();
 
   if (!commitResult.success) {
-    ui.error("Failed to commit changes", commitResult.error || "Unknown error");
-    return { ok: false, error: "commit_failed" };
+    ui.error('Failed to commit changes', commitResult.error || 'Unknown error');
+    return { ok: false, error: 'commit_failed' };
   }
 
-  ui.success("Commit successful!", commitMessage);
+  ui.success('Commit successful!', commitMessage);
 
   if (commitResult.output) {
-    console.log("");
+    console.log('');
     console.log(chalk.gray(commitResult.output));
   }
 
   // Get current branch name
-  const branchResult = await runGitCommand(["branch", "--show-current"]);
-  const currentBranch = branchResult.output || "main";
+  const branchResult = await runGitCommand(['branch', '--show-current']);
+  const currentBranch = branchResult.output || 'main';
 
   const pushSpinner = ui.createSpinner(`Pushing to ${currentBranch}...`);
   pushSpinner.start();
 
-  const pushResult = await runGitCommand(["push", "origin", currentBranch]);
+  const pushResult = await runGitCommand(['push', 'origin', currentBranch]);
   pushSpinner.stop();
 
   if (!pushResult.success) {
-    ui.error("Failed to push changes", pushResult.error || "Unknown error");
-    return { ok: false, error: "push_failed", commitMessage };
+    ui.error('Failed to push changes', pushResult.error || 'Unknown error');
+    return { ok: false, error: 'push_failed', commitMessage };
   }
 
-  ui.success("Push successful!", `Changes pushed to ${currentBranch}`);
+  ui.success('Push successful!', `Changes pushed to ${currentBranch}`);
 
   if (pushResult.output || pushResult.error) {
-    console.log("");
+    console.log('');
     console.log(chalk.gray(pushResult.output || pushResult.error));
   }
 
@@ -253,44 +242,41 @@ export const gitAddCommitPush = async () => {
 };
 
 export const gitFix = async () => {
-  ui.section("🔧 Git Configuration Fix", "Setting core.ignorecase to false");
+  ui.section('🔧 Git Configuration Fix', 'Setting core.ignorecase to false');
 
   // Check if we're in a git repository for local config
-  const gitStatusResult = await runGitCommand(["status", "--porcelain"]);
+  const gitStatusResult = await runGitCommand(['status', '--porcelain']);
   const isGitRepo = gitStatusResult.success;
 
   if (!isGitRepo) {
-    ui.warning(
-      "Not in a git repository",
-      "Local configuration will be skipped.",
-    );
+    ui.warning('Not in a git repository', 'Local configuration will be skipped.');
   }
 
   // Get current configurations
-  const spinner = ui.createSpinner("Checking current git configuration...");
+  const spinner = ui.createSpinner('Checking current git configuration...');
   spinner.start();
 
-  const currentLocal = isGitRepo ? await checkIgnoreCase("local") : null;
-  const currentGlobal = await checkIgnoreCase("global");
+  const currentLocal = isGitRepo ? await checkIgnoreCase('local') : null;
+  const currentGlobal = await checkIgnoreCase('global');
 
   spinner.stop();
 
   // Show current status
-  ui.info("Current git configuration:\n");
-  console.log(`  🌐 Global core.ignorecase: ${currentGlobal || "not set"}`);
+  ui.info('Current git configuration:\n');
+  console.log(`  🌐 Global core.ignorecase: ${currentGlobal || 'not set'}`);
   if (isGitRepo) {
-    console.log(`  📁 Local core.ignorecase:  ${currentLocal || "not set"}`);
+    console.log(`  📁 Local core.ignorecase:  ${currentLocal || 'not set'}`);
   }
-  console.log("");
+  console.log('');
 
   // Determine what needs to be fixed
-  const needsGlobalFix = currentGlobal !== "false";
-  const needsLocalFix = isGitRepo && currentLocal !== "false";
+  const needsGlobalFix = currentGlobal !== 'false';
+  const needsLocalFix = isGitRepo && currentLocal !== 'false';
 
   if (!needsGlobalFix && !needsLocalFix) {
     ui.success(
-      "No fixes needed!",
-      "core.ignorecase is already set to false for all applicable scopes.",
+      'No fixes needed!',
+      'core.ignorecase is already set to false for all applicable scopes.',
     );
     return { ok: true, applied: [] };
   }
@@ -304,24 +290,24 @@ export const gitFix = async () => {
 
   if (needsGlobalFix) {
     choices.push({
-      name: "🌐 Global (affects all repositories)",
-      value: "global",
+      name: '🌐 Global (affects all repositories)',
+      value: 'global',
       checked: true,
     });
   }
 
   if (needsLocalFix) {
     choices.push({
-      name: "📁 Local (current repository only)",
-      value: "local",
+      name: '📁 Local (current repository only)',
+      value: 'local',
       checked: true,
     });
   }
 
   if (choices.length > 1) {
     choices.push({
-      name: "🎯 Both global and local",
-      value: "both",
+      name: '🎯 Both global and local',
+      value: 'both',
       checked: false,
     });
   }
@@ -331,14 +317,14 @@ export const gitFix = async () => {
   if (choices.length === 1) {
     // Only one option available, ask for confirmation
     const { proceed } = await inquirer.prompt({
-      type: "confirm",
-      name: "proceed",
+      type: 'confirm',
+      name: 'proceed',
       message: `Fix ${choices[0].value} git configuration?`,
       default: true,
     });
 
     if (!proceed) {
-      ui.info("Cancelled.");
+      ui.info('Cancelled.');
       return { ok: false, cancelled: true };
     }
 
@@ -346,31 +332,31 @@ export const gitFix = async () => {
   } else {
     // Multiple options, let user choose
     const { scope } = await inquirer.prompt({
-      type: "list",
-      name: "scope",
-      message: "Which configuration would you like to fix?",
+      type: 'list',
+      name: 'scope',
+      message: 'Which configuration would you like to fix?',
       choices,
-      default: "both",
+      default: 'both',
     });
 
-    if (scope === "both") {
-      scopesToFix = ["global", "local"];
+    if (scope === 'both') {
+      scopesToFix = ['global', 'local'];
     } else {
       scopesToFix = [scope];
     }
   }
 
   // Apply the fixes
-  const fixSpinner = ui.createSpinner("Applying git configuration fixes...");
+  const fixSpinner = ui.createSpinner('Applying git configuration fixes...');
   fixSpinner.start();
 
   const applied: string[] = [];
   const failed: string[] = [];
 
   for (const scope of scopesToFix) {
-    if (scope === "both") continue; // This is handled by having both global and local in the array
+    if (scope === 'both') continue; // This is handled by having both global and local in the array
 
-    if (scope === "local" && !isGitRepo) {
+    if (scope === 'local' && !isGitRepo) {
       failed.push(`${scope} (not in git repository)`);
       continue;
     }
@@ -388,37 +374,34 @@ export const gitFix = async () => {
   // Show results
   if (applied.length > 0) {
     ui.success(
-      "Git configuration fixed!",
-      `core.ignorecase set to false for: ${applied.join(", ")}`,
+      'Git configuration fixed!',
+      `core.ignorecase set to false for: ${applied.join(', ')}`,
     );
   }
 
   if (failed.length > 0) {
-    ui.error(
-      "Some fixes failed",
-      `Failed to set configuration for: ${failed.join(", ")}`,
-    );
+    ui.error('Some fixes failed', `Failed to set configuration for: ${failed.join(', ')}`);
   }
 
   // Show final status
-  console.log("");
-  ui.info("Updated git configuration:\n");
+  console.log('');
+  ui.info('Updated git configuration:\n');
 
-  const finalGlobal = await checkIgnoreCase("global");
-  const finalLocal = isGitRepo ? await checkIgnoreCase("local") : null;
+  const finalGlobal = await checkIgnoreCase('global');
+  const finalLocal = isGitRepo ? await checkIgnoreCase('local') : null;
 
-  console.log(`  🌐 Global core.ignorecase: ${finalGlobal || "not set"}`);
+  console.log(`  🌐 Global core.ignorecase: ${finalGlobal || 'not set'}`);
   if (isGitRepo) {
-    console.log(`  📁 Local core.ignorecase:  ${finalLocal || "not set"}`);
+    console.log(`  📁 Local core.ignorecase:  ${finalLocal || 'not set'}`);
   }
 
   ui.table([
-    { key: "Scopes fixed", value: applied.length.toString() },
-    { key: "Failed fixes", value: failed.length.toString() },
-    { key: "Global setting", value: finalGlobal || "not set" },
+    { key: 'Scopes fixed', value: applied.length.toString() },
+    { key: 'Failed fixes', value: failed.length.toString() },
+    { key: 'Global setting', value: finalGlobal || 'not set' },
     {
-      key: "Local setting",
-      value: isGitRepo ? finalLocal || "not set" : "N/A",
+      key: 'Local setting',
+      value: isGitRepo ? finalLocal || 'not set' : 'N/A',
     },
   ]);
 
@@ -440,22 +423,22 @@ const resolvePathPatterns = (patterns: string[]): string[] => {
   const resolved: string[] = [];
 
   for (const pattern of patterns) {
-    if (!pattern.includes("*")) {
+    if (!pattern.includes('*')) {
       resolved.push(pattern);
       continue;
     }
 
-    const normalized = pattern.replace(/\\/g, "/");
-    const segments = normalized.split("/");
-    const wildcardIndex = segments.findIndex((s) => s === "*");
+    const normalized = pattern.replace(/\\/g, '/');
+    const segments = normalized.split('/');
+    const wildcardIndex = segments.findIndex((s) => s === '*');
 
     if (wildcardIndex === -1) {
       resolved.push(pattern);
       continue;
     }
 
-    const basePath = segments.slice(0, wildcardIndex).join("/");
-    const suffix = segments.slice(wildcardIndex + 1).join("/");
+    const basePath = segments.slice(0, wildcardIndex).join('/');
+    const suffix = segments.slice(wildcardIndex + 1).join('/');
     const baseFullPath = resolve(process.cwd(), basePath);
 
     if (!existsSync(baseFullPath)) continue;
@@ -464,9 +447,7 @@ const resolvePathPatterns = (patterns: string[]): string[] => {
       const entries = readdirSync(baseFullPath, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
-        const candidatePath = [basePath, entry.name, suffix]
-          .filter(Boolean)
-          .join("/");
+        const candidatePath = [basePath, entry.name, suffix].filter(Boolean).join('/');
         const fullPath = resolve(process.cwd(), candidatePath);
         if (existsSync(fullPath)) {
           resolved.push(`./${candidatePath}`);
@@ -479,66 +460,69 @@ const resolvePathPatterns = (patterns: string[]): string[] => {
 };
 
 export const gitAutoCommit = async () => {
-  ui.section("🔄 Git Auto Commit", "Committing project-specific files");
+  ui.section('🔄 Git Auto Commit', 'Committing project-specific files');
 
   // Read project configuration
   const config = readConfig();
   if (!config) {
-    ui.error("Configuration not found", "Please run 'dk init' first.");
-    return { ok: false, error: "no_config" };
+    ui.error('Configuration not found', "Please run 'dk init' first.");
+    return { ok: false, error: 'no_config' };
   }
 
   const projectType = config.projectType;
 
   // Check if we're in a git repository
-  const gitStatusResult = await runGitCommand(["status", "--porcelain"]);
+  const gitStatusResult = await runGitCommand(['status', '--porcelain']);
   const isGitRepo = gitStatusResult.success;
 
   if (!isGitRepo) {
-    ui.error(
-      "Not in a git repository",
-      "Please run this command from a git repository.",
-    );
-    return { ok: false, error: "not_git_repo" };
+    ui.error('Not in a git repository', 'Please run this command from a git repository.');
+    return { ok: false, error: 'not_git_repo' };
   }
 
   // Project-type specific commit logic
   let candidatePaths: string[] = [];
-  let commitMessage = "";
+  let commitMessage = '';
 
   switch (projectType) {
-    case "node-express":
-      ui.info("Project type", "node-express");
-      candidatePaths = ["./prisma", "./src/_s2s"];
-      commitMessage = "prisma and s2s changes";
+    case 'node-express':
+      ui.info('Project type', 'node-express');
+      candidatePaths = ['./prisma', './src/_s2s'];
+      commitMessage = 'prisma and s2s changes';
       break;
 
-    case "node-fastify":
-      ui.info("Project type", "node-fastify");
-      candidatePaths = ["src/*/_prisma", "./src/_s2s"];
-      commitMessage = "_prisma and s2s changes";
+    case 'node-fastify':
+      ui.info('Project type', 'node-fastify');
+      candidatePaths = ['src/*/_prisma', './src/_s2s'];
+      commitMessage = '_prisma and s2s changes';
       break;
 
-    case "npm-package":
-      ui.info("Project type", "npm-package");
-      candidatePaths = ["./prisma", "./src/_s2s", "./dist"];
-      commitMessage = "prisma, s2s and dist changes";
+    case 'npm-package':
+      ui.info('Project type', 'npm-package');
+      candidatePaths = ['./prisma', './src/_s2s', './dist'];
+      commitMessage = 'prisma, s2s and dist changes';
       break;
 
-    case "vite-react":
-      ui.info("Project type", "vite-react");
-      candidatePaths = ["./b2fPortal","./_s2c"];
+    case 'react-native-expo':
+      ui.info('Project type', 'react-native-expo');
+      candidatePaths = ['./b2fPortal', './_s2c'];
+      commitMessage = 's2c changes';
+      break;
+
+    case 'vite-react':
+      ui.info('Project type', 'vite-react');
+      candidatePaths = ['./b2fPortal', './_s2c'];
 
       // Format date as DD/MM/YYYY, h:mm:ss am/pm
       const now = new Date();
-      const day = String(now.getDate()).padStart(2, "0");
-      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
       const year = now.getFullYear();
 
       let hours = now.getHours();
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const seconds = String(now.getSeconds()).padStart(2, "0");
-      const ampm = hours >= 12 ? "pm" : "am";
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'pm' : 'am';
       hours = hours % 12 || 12;
 
       commitMessage = `${day}/${month}/${year}, ${hours}:${minutes}:${seconds} ${ampm} b2fPortal updated`;
@@ -546,10 +530,10 @@ export const gitAutoCommit = async () => {
 
     default:
       ui.error(
-        "Unsupported project type",
+        'Unsupported project type',
         `Auto-commit is not configured for project type: ${projectType}`,
       );
-      return { ok: false, error: "unsupported_project_type" };
+      return { ok: false, error: 'unsupported_project_type' };
   }
 
   // Resolve glob patterns (e.g. src/*/_prisma) into concrete paths
@@ -563,64 +547,62 @@ export const gitAutoCommit = async () => {
 
   if (existingPaths.length === 0) {
     ui.info(
-      "No matching directories found",
-      `None of the expected directories exist: ${candidatePaths.join(", ")}`,
+      'No matching directories found',
+      `None of the expected directories exist: ${candidatePaths.join(', ')}`,
     );
     return { ok: true, noChanges: true };
   }
 
   // Build git add args with glob patterns for existing paths
-  const addArgs = ["add", ...existingPaths.map((p) => `${p}/*`)];
+  const addArgs = ['add', ...existingPaths.map((p) => `${p}/*`)];
 
   // Check if there are changes to commit
-  const checkChangesResult = await runGitCommand(["status", "--porcelain"]);
+  const checkChangesResult = await runGitCommand(['status', '--porcelain']);
   if (!checkChangesResult.output) {
-    ui.info("No changes to commit", "Working tree is clean.");
+    ui.info('No changes to commit', 'Working tree is clean.');
     return { ok: true, noChanges: true };
   }
 
   // Stage the files
-  const addSpinner = ui.createSpinner(
-    `Staging files: ${addArgs.slice(1).join(" ")}...`,
-  );
+  const addSpinner = ui.createSpinner(`Staging files: ${addArgs.slice(1).join(' ')}...`);
   addSpinner.start();
 
   const addResult = await runGitCommand(addArgs);
   addSpinner.stop();
 
   if (!addResult.success) {
-    ui.error("Failed to stage files", addResult.error || "Unknown error");
-    return { ok: false, error: "add_failed" };
+    ui.error('Failed to stage files', addResult.error || 'Unknown error');
+    return { ok: false, error: 'add_failed' };
   }
 
   // Check if there are staged changes
-  const stagedResult = await runGitCommand(["diff", "--cached", "--name-only"]);
+  const stagedResult = await runGitCommand(['diff', '--cached', '--name-only']);
   if (!stagedResult.output) {
-    ui.info("No staged changes", "The specified files have no changes.");
+    ui.info('No staged changes', 'The specified files have no changes.');
     return { ok: true, noChanges: true };
   }
 
-  ui.success("Files staged", stagedResult.output);
-  console.log(chalk.gray("\nStaged files:"));
+  ui.success('Files staged', stagedResult.output);
+  console.log(chalk.gray('\nStaged files:'));
   console.log(stagedResult.output);
-  console.log("");
+  console.log('');
 
   // Commit the changes
-  const commitSpinner = ui.createSpinner("Committing changes...");
+  const commitSpinner = ui.createSpinner('Committing changes...');
   commitSpinner.start();
 
-  const commitResult = await runGitCommand(["commit", "-m", commitMessage]);
+  const commitResult = await runGitCommand(['commit', '-m', commitMessage]);
   commitSpinner.stop();
 
   if (!commitResult.success) {
-    ui.error("Failed to commit changes", commitResult.error || "Unknown error");
-    return { ok: false, error: "commit_failed" };
+    ui.error('Failed to commit changes', commitResult.error || 'Unknown error');
+    return { ok: false, error: 'commit_failed' };
   }
 
-  ui.success("Commit successful!", commitMessage);
+  ui.success('Commit successful!', commitMessage);
 
   if (commitResult.output) {
-    console.log("");
+    console.log('');
     console.log(chalk.gray(commitResult.output));
   }
 

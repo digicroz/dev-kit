@@ -1,6 +1,6 @@
 {
   "name": "@digicroz/dev-kit",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A comprehensive CLI toolkit for modern development workflows - featuring task automation, project cleaning, and developer utilities",
   "keywords": [
     "cli",
@@ -71,7 +71,22 @@
     "deploy:dev": "dk deploy dev",
     "deploy:prod": "dk deploy prod",
     "link": "npm run build && npm link",
-    "unlink": "npm unlink -g @digicroz/dev-kit"
+    "unlink": "npm unlink -g @digicroz/dev-kit",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
+    "typecheck": "tsc --noEmit"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@digicroz/js-kit": "^1.0.14",
@@ -99,8 +114,13 @@
     "@types/node": "^24.0.10",
     "@types/pg": "^8.11.10",
     "@types/sqlite3": "^3.1.11",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
+    "prettier": "^3.8.3",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.59.3"
   }
 }
