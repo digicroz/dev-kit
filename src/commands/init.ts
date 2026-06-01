@@ -37,22 +37,35 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
   if (!existsSync(vscodeDir)) {
     await fs.mkdir(vscodeDir, { recursive: true });
   }
+  interface VSCodeSettings {
+    files?: {
+      readonlyInclude?: Record<string, boolean>;
+      // you can add other VSCode settings here if needed
+    };
+    [key: string]: unknown; // allow extra arbitrary settings
+  }
 
-  let settings: any = {};
+  let settings: VSCodeSettings = {};
 
   if (existsSync(settingsPath)) {
     try {
       const settingsContent = await fs.readFile(settingsPath, 'utf8');
-      settings = JSON.parse(settingsContent);
+      settings = JSON.parse(settingsContent) as VSCodeSettings;
     } catch (error) {}
   }
-
-  if (!settings['files.readonlyInclude']) {
-    settings['files.readonlyInclude'] = {
+  if (!settings.files?.readonlyInclude) {
+    settings.files = settings.files ?? {};
+    settings.files.readonlyInclude = {
       'dist/**': true,
       'node_modules/**': true,
     };
   }
+  // if (!settings['files.readonlyInclude']) {
+  //   settings['files.readonlyInclude'] = {
+  //     'dist/**': true,
+  //     'node_modules/**': true,
+  //   };
+  // }
 
   if (generatorsConfig?.assets) {
     const imageIndexPath = path.posix.join(
@@ -60,7 +73,8 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
       generatorsConfig.assets.image?.baseDir || 'images',
       'index.ts',
     );
-    settings['files.readonlyInclude'][imageIndexPath] = true;
+    // settings['files.readonlyInclude'][imageIndexPath] = true;
+    settings.files.readonlyInclude![imageIndexPath] = true;
 
     if (generatorsConfig.assets.svg) {
       const svgIndexPath = path.posix.join(
@@ -68,7 +82,8 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
         generatorsConfig.assets.svg.baseDir,
         'index.ts',
       );
-      settings['files.readonlyInclude'][svgIndexPath] = true;
+      // settings['files.readonlyInclude'][svgIndexPath] = true;
+      settings.files.readonlyInclude![svgIndexPath] = true;
     }
   }
 
@@ -234,8 +249,9 @@ async function detectAndConfigureSpringBootServices(): Promise<SpringBootConfig 
     services.sort((a, b) => a.startingOrderIndex - b.startingOrderIndex);
 
     return { services };
-  } catch (error: any) {
-    ui.warning('Failed to detect Spring Boot services:', error?.message || String(error));
+  } catch (error: unknown) {
+    const err = error as Error;
+    ui.warning('Failed to detect Spring Boot services:', err?.message || String(error));
     return undefined;
   }
 }

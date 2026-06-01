@@ -75,7 +75,7 @@ export function writeWorkspaceConfig(config: WorkspaceConfig): void {
 }
 
 // Validate workspace config structure
-export function validateWorkspaceConfig(config: any): boolean {
+export function validateWorkspaceConfig(config: WorkspaceConfig): boolean {
   if (!config.version || !config.workspaces) {
     return false;
   }

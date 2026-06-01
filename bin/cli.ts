@@ -42,11 +42,11 @@ async function showWelcomeBanner() {
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
     gradientString('cyan', 'blue')('🚀 Development Kit') +
-    chalk.gray(' v' + version) +
-    '\n' +
-    chalk.cyan('━'.repeat(20)) +
-    '\n' +
-    chalk.white('Fast • Beautiful • Modern ⚡'),
+      chalk.gray(' v' + version) +
+      '\n' +
+      chalk.cyan('━'.repeat(20)) +
+      '\n' +
+      chalk.white('Fast • Beautiful • Modern ⚡'),
     {
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
       margin: { top: 0, bottom: 1, left: 0, right: 0 },
@@ -76,10 +76,10 @@ function showProjectModeRequired() {
   console.log(
     createBox(
       chalk.red('⚠️ Project Mode Required') +
-      '\n' +
-      chalk.gray('This command requires dk.config.json') +
-      '\n' +
-      chalk.cyan("Run 'dk init' to create project configuration"),
+        '\n' +
+        chalk.gray('This command requires dk.config.json') +
+        '\n' +
+        chalk.cyan("Run 'dk init' to create project configuration"),
       'red',
       '#1a0000',
     ),
@@ -100,21 +100,21 @@ function handleCancellation(commandName: string) {
 }
 
 // Check if error is user cancellation
-function isCancellationError(error: any): boolean {
+function isCancellationError(error: Error): boolean {
   return error.name === 'ExitPromptError' || error.message?.includes('SIGINT');
 }
-
+export type CommandAction<R = void, A extends unknown[] = []> = (...args: A) => Promise<R>;
 // Enhanced command wrapper with loading animation
-function createEnhancedCommand(
+function createEnhancedCommand<R, A extends unknown[]>(
   name: string,
   description: string,
-  action: Function,
+  action: CommandAction<R, A>,
   requiresProject: boolean = false,
 ) {
   return {
     name,
     description: chalk.gray(description),
-    async execute(...args: any[]) {
+    async execute(...args: A) {
       // Check if command requires project mode
       if (requiresProject && !configExists()) {
         showProjectModeRequired();
@@ -131,11 +131,11 @@ function createEnhancedCommand(
         spinner.stop();
         console.log(chalk.green('✓'), chalk.bold(`${name} ready`));
         await action(...args);
-      } catch (error: any) {
+      } catch (error: unknown) {
         spinner.stop();
 
         // Handle user cancellation gracefully
-        if (isCancellationError(error)) {
+        if (error instanceof Error && isCancellationError(error)) {
           handleCancellation(name);
           return;
         }
@@ -194,12 +194,12 @@ async function main() {
   console.log(
     createBox(
       chalk[modeColor](`${modeIcon} ${mode}`) +
-      '\n' +
-      chalk.gray(
-        projectMode
-          ? 'Running with project configuration'
-          : "Running in standalone mode - some commands require 'dk init'",
-      ),
+        '\n' +
+        chalk.gray(
+          projectMode
+            ? 'Running with project configuration'
+            : "Running in standalone mode - some commands require 'dk init'",
+        ),
       modeColor,
       projectMode ? '#0a1a0a' : '#1a1a00',
     ),
@@ -238,7 +238,7 @@ async function main() {
     .description(chalk.gray('🚀 Initialize dk.config.json'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('init', 'Initializing configuration', runInit);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof runInit>));
     });
 
   program
@@ -247,7 +247,7 @@ async function main() {
     .description(chalk.gray('🧹 Clean temporary files'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('clean', 'Cleaning project', clean, true);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof clean>));
     });
 
   program
@@ -255,7 +255,7 @@ async function main() {
     .description(chalk.gray('🚀 Start development server'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('dev', 'Starting development server', dev, true);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof dev>));
     });
 
   program
@@ -264,7 +264,7 @@ async function main() {
     .description(chalk.gray('🩺 System health check'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('doctor', 'Running diagnostics', doctor);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof doctor>));
     });
 
   // Workspace commands
@@ -282,7 +282,7 @@ async function main() {
         'Initializing workspace configuration',
         workspaceInit,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof workspaceInit>));
     });
 
   workspaceCommand
@@ -294,7 +294,7 @@ async function main() {
         'Opening workspace configuration',
         workspaceConfig,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof workspaceConfig>));
     });
 
   workspaceCommand
@@ -302,13 +302,13 @@ async function main() {
     .description(chalk.gray('📋 List all workspaces'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('Workspace list', 'Listing workspaces', workspaceList);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof workspaceList>));
     });
 
   // Default workspace action (interactive selector)
   workspaceCommand.action(async (...args) => {
     const cmd = createEnhancedCommand('Workspace', 'Opening workspace selector', workspace);
-    await cmd.execute(...args);
+    await cmd.execute(...(args as Parameters<typeof workspace>));
   });
 
   // Enhanced Deploy command with beautiful UI
@@ -334,8 +334,8 @@ async function main() {
         console.log(
           createBox(
             gradientString('magenta', 'cyan')('🚀 Deployment Center') +
-            '\n' +
-            chalk.gray('Choose your destination'),
+              '\n' +
+              chalk.gray('Choose your destination'),
             'magenta',
             '#0a0a1a',
           ),
@@ -376,8 +376,8 @@ async function main() {
           console.log(chalk.red('✓'), chalk.bold('Deploying to Production'));
           await deployProd();
         }
-      } catch (error: any) {
-        if (isCancellationError(error)) {
+      } catch (error: unknown) {
+        if (error instanceof Error && isCancellationError(error)) {
           handleCancellation('Deployment');
           return;
         }
@@ -390,7 +390,7 @@ async function main() {
     .description(chalk.gray('🔧 Quick development deploy'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('deploy uat', 'Deploying to uat', deployUat, true);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof deployUat>));
     });
 
   deployCommand
@@ -398,15 +398,20 @@ async function main() {
     .description(chalk.gray('🏭 Production deployment'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('deploy prod', 'Deploying to prod', deployProd, true);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof deployProd>));
     });
 
   program
     .command('release')
     .description(chalk.gray('📦 Release npm package'))
     .action(async (...args) => {
-      const cmd = createEnhancedCommand('release', 'Releasing npm package', releaseNpmPackage, true);
-      await cmd.execute(...args);
+      const cmd = createEnhancedCommand(
+        'release',
+        'Releasing npm package',
+        releaseNpmPackage,
+        true,
+      );
+      await cmd.execute(...(args as Parameters<typeof releaseNpmPackage>));
     });
 
   // React Native commands
@@ -427,8 +432,8 @@ async function main() {
         console.log(
           createBox(
             gradientString('green', 'blue')('📱 React Native Build Center') +
-            '\n' +
-            chalk.gray('Choose your build target'),
+              '\n' +
+              chalk.gray('Choose your build target'),
             'green',
             '#0a1a0a',
           ),
@@ -477,8 +482,8 @@ async function main() {
         } else if (buildType === 'android-debug-no-clean') {
           await buildAndroidDebug(true);
         }
-      } catch (error: any) {
-        if (isCancellationError(error)) {
+      } catch (error: unknown) {
+        if (error instanceof Error && isCancellationError(error)) {
           handleCancellation('Build');
           return;
         }
@@ -511,7 +516,7 @@ async function main() {
         () => buildAndroidRelease(true),
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute();
     });
 
   rnCommand
@@ -539,7 +544,7 @@ async function main() {
         () => buildAndroidDebug(true),
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute();
     });
 
   // Spring Boot commands
@@ -558,7 +563,7 @@ async function main() {
         startSpringBootServices,
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof startSpringBootServices>));
     });
 
   sbCommand
@@ -571,7 +576,7 @@ async function main() {
         () => buildSpringBootServices(mode),
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute();
     });
 
   program
@@ -580,7 +585,7 @@ async function main() {
     .description(chalk.gray('⚡ Run all configured generators'))
     .action(async (...args) => {
       const cmd = createEnhancedCommand('Generators', 'Running all generators', gen, true);
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof gen>));
     });
 
   program
@@ -593,7 +598,7 @@ async function main() {
         gitAutoCommit,
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof gitAutoCommit>));
     });
 
   const gitCommand = program.command('git').description(chalk.gray('🔧 Git configuration tools'));
@@ -607,7 +612,7 @@ async function main() {
         'Fixing git ignorecase settings',
         gitFix,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof gitFix>));
     });
 
   gitCommand
@@ -619,7 +624,7 @@ async function main() {
         'Staging and committing changes',
         gitAddCommit,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof gitAddCommit>));
     });
 
   gitCommand
@@ -631,7 +636,7 @@ async function main() {
         'Staging, committing, and pushing changes',
         gitAddCommitPush,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof gitAddCommitPush>));
     });
 
   gitCommand
@@ -644,7 +649,7 @@ async function main() {
         gitAutoCommit,
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof gitAutoCommit>));
     });
 
   // Database commands (only for node-express projects)
@@ -660,7 +665,7 @@ async function main() {
         dbStatus,
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof dbStatus>));
     });
 
   // Database dump commands
@@ -678,7 +683,7 @@ async function main() {
         dbDumpCreate,
         true,
       );
-      await cmd.execute(...args);
+      await cmd.execute(...(args as Parameters<typeof dbDumpCreate>));
     });
 
   dumpCommand
@@ -691,7 +696,7 @@ async function main() {
         dbDumpApply,
         true,
       );
-      await cmd.execute({ version }, ...args);
+      await cmd.execute({ version });
     });
 
   // Database drop commands
@@ -719,53 +724,53 @@ async function main() {
     console.log(
       createBox(
         gradientString('blue', 'cyan')('💡 Pro Tips') +
-        '\n' +
-        chalk.gray('• Quick: ') +
-        chalk.cyan('dk c') +
-        chalk.gray(', ') +
-        chalk.cyan('dk dr') +
-        '\n' +
-        chalk.gray('• Dev: ') +
-        chalk.cyan('dk dev') +
-        '\n' +
-        chalk.gray('• Deploy: ') +
-        chalk.cyan('dk d dev') +
-        '\n' +
-        chalk.gray('• Release: ') +
-        chalk.cyan('dk release') +
-        '\n' +
-        chalk.gray('• RN Release: ') +
-        chalk.cyan('dk rn br') +
-        '\n' +
-        chalk.gray('• RN Debug: ') +
-        chalk.cyan('dk rn bd') +
-        '\n' +
-        chalk.gray('• No Clean: ') +
-        chalk.cyan('dk rn brnc') +
-        '\n' +
-        chalk.gray('• Spring Boot: ') +
-        chalk.cyan('dk sb start') +
-        '\n' +
-        chalk.gray('• Generators: ') +
-        chalk.cyan('dk gen') +
-        '\n' +
-        chalk.gray('• Git Fix: ') +
-        chalk.cyan('dk git fix') +
-        '\n' +
-        chalk.gray('• Git Add & Commit: ') +
-        chalk.cyan('dk git ac') +
-        '\n' +
-        chalk.gray('• Git Add, Commit & Push: ') +
-        chalk.cyan('dk git acp') +
-        '\n' +
-        chalk.gray('• DB Status: ') +
-        chalk.cyan('dk db status') +
-        '\n' +
-        chalk.gray('• DB Dump: ') +
-        chalk.cyan('dk db dump create') +
-        '\n' +
-        chalk.gray('• Help: ') +
-        chalk.cyan('dk --help'),
+          '\n' +
+          chalk.gray('• Quick: ') +
+          chalk.cyan('dk c') +
+          chalk.gray(', ') +
+          chalk.cyan('dk dr') +
+          '\n' +
+          chalk.gray('• Dev: ') +
+          chalk.cyan('dk dev') +
+          '\n' +
+          chalk.gray('• Deploy: ') +
+          chalk.cyan('dk d dev') +
+          '\n' +
+          chalk.gray('• Release: ') +
+          chalk.cyan('dk release') +
+          '\n' +
+          chalk.gray('• RN Release: ') +
+          chalk.cyan('dk rn br') +
+          '\n' +
+          chalk.gray('• RN Debug: ') +
+          chalk.cyan('dk rn bd') +
+          '\n' +
+          chalk.gray('• No Clean: ') +
+          chalk.cyan('dk rn brnc') +
+          '\n' +
+          chalk.gray('• Spring Boot: ') +
+          chalk.cyan('dk sb start') +
+          '\n' +
+          chalk.gray('• Generators: ') +
+          chalk.cyan('dk gen') +
+          '\n' +
+          chalk.gray('• Git Fix: ') +
+          chalk.cyan('dk git fix') +
+          '\n' +
+          chalk.gray('• Git Add & Commit: ') +
+          chalk.cyan('dk git ac') +
+          '\n' +
+          chalk.gray('• Git Add, Commit & Push: ') +
+          chalk.cyan('dk git acp') +
+          '\n' +
+          chalk.gray('• DB Status: ') +
+          chalk.cyan('dk db status') +
+          '\n' +
+          chalk.gray('• DB Dump: ') +
+          chalk.cyan('dk db dump create') +
+          '\n' +
+          chalk.gray('• Help: ') +
+          chalk.cyan('dk --help'),
         'blue',
       ),
     );
@@ -905,8 +910,8 @@ async function showInteractiveMenu(projectMode: boolean) {
       console.log(chalk.cyan(`\n▶ Running: dk ${selected.command}\n`));
       await executeCommand(selected.command, projectMode);
     }
-  } catch (error: any) {
-    if (isCancellationError(error)) {
+  } catch (error: unknown) {
+    if (error instanceof Error && isCancellationError(error)) {
       console.log(gradientString('yellow', 'orange')('\n👋 Thanks for using DK! See you soon! ✨'));
       process.exit(0);
     }

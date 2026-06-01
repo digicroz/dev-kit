@@ -12,12 +12,6 @@ interface DeployInfo {
   version: string;
 }
 
-interface PackageJson {
-  name?: string;
-  version?: string;
-  [key: string]: unknown;
-}
-
 interface DkConfig {
   deploy?: {
     uat?: string | string[];
@@ -60,7 +54,14 @@ function getPackageJsonPath(): string {
   }
   return packagePath;
 }
-
+interface PackageJson {
+  name?: string;
+  version?: string;
+  scripts?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  [key: string]: unknown; // allow extra fields
+}
 /**
  * Read and parse package.json
  */

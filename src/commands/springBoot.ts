@@ -61,8 +61,9 @@ export async function startSpringBootServices() {
 
     // Keep the process alive
     await new Promise(() => {});
-  } catch (error: any) {
-    ui.error('Failed to start services:', error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    ui.error('Failed to start services:', err.message);
 
     // Clean up any running processes
     runningProcesses.forEach(({ service, process }) => {
@@ -249,8 +250,8 @@ export async function buildSpringBootServices(mode?: string) {
 async function buildService(
   service: SpringBootService,
   buildOutDir: string,
-  glob: any,
-  fs: any,
+  glob: typeof import('fast-glob'),
+  fs: typeof import('fs'),
 ): Promise<void> {
   const servicePath = join(process.cwd(), service.path);
 

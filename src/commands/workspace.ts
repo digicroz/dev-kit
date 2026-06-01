@@ -17,6 +17,7 @@ import {
 import type { Workspace, WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
 
 const execAsync = promisify(exec);
+type ChalkColor = 'red' | 'green' | 'blue' | 'yellow' | 'cyan' | 'magenta' | 'gray';
 
 // Initialize workspace configuration
 export async function workspaceInit() {
@@ -75,8 +76,9 @@ export async function workspaceInit() {
           'Workspace config imported successfully',
           `Location: ${getWorkspaceConfigPath()}`,
         );
-      } catch (error: any) {
-        ui.error('Failed to import config', error.message);
+      } catch (error: unknown) {
+        const err = error as Error;
+        ui.error('Failed to import config', err.message);
       }
     } else {
       ui.info('Using existing workspace config', `Location: ${getWorkspaceConfigPath()}`);
@@ -100,9 +102,11 @@ export async function workspaceConfig() {
   try {
     await execAsync(`code "${configPath}"`);
     spinner.succeed('Config opened in VS Code');
-  } catch (error: any) {
+  } catch (error: unknown) {
     spinner.fail('Failed to open VS Code');
-    ui.error('Error', error.message);
+    const err = error as Error;
+
+    ui.error('Error', err.message);
     ui.info('Config location', configPath);
   }
 }
@@ -121,8 +125,9 @@ async function executeAction(
       try {
         await execAsync(`code "${modulePath}"`);
         console.log(chalk.green(`  ✓ Opened ${moduleName} in VS Code`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open in VS Code: ${error.message}`));
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.log(chalk.red(`  ✗ Failed to open in VS Code: ${err.message}`));
       }
       break;
 
@@ -131,8 +136,9 @@ async function executeAction(
       try {
         await execAsync(`antigravity "${modulePath}"`);
         console.log(chalk.green(`  ✓ Opened ${moduleName} in Antigravity`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open in Antigravity: ${error.message}`));
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.log(chalk.red(`  ✗ Failed to open in Antigravity: ${err.message}`));
       }
       break;
 
@@ -149,8 +155,9 @@ async function executeAction(
         if (stdout) console.log(chalk.gray(stdout));
         if (stderr) console.log(chalk.yellow(stderr));
         console.log(chalk.green(`  ✓ Command completed`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Command failed: ${error.message}`));
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.log(chalk.red(`  ✗ Command failed: ${err.message}`));
       }
       break;
 
@@ -173,8 +180,9 @@ async function executeAction(
         if (stdout) console.log(chalk.gray(stdout));
         if (stderr) console.log(chalk.yellow(stderr));
         console.log(chalk.green(`  ✓ Script completed`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Script failed: ${error.message}`));
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.log(chalk.red(`  ✗ Script failed: ${err.message}`));
       }
       break;
 
@@ -195,8 +203,9 @@ async function executeAction(
 
         await execAsync(openCmd);
         console.log(chalk.green(`  ✓ URL opened`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open URL: ${error.message}`));
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.log(chalk.red(`  ✗ Failed to open URL: ${err.message}`));
       }
       break;
 
@@ -213,8 +222,9 @@ async function executeAction(
 
         await execAsync(openCmd);
         console.log(chalk.green(`  ✓ Folder opened`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open folder: ${error.message}`));
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.log(chalk.red(`  ✗ Failed to open folder: ${err.message}`));
       }
       break;
 
@@ -263,7 +273,9 @@ export async function workspace() {
 
   // Show workspace selector
   const workspaceChoices = config.workspaces.map((ws, index) => {
-    const colorFn = (chalk as any)[ws.color || 'cyan'] || chalk.cyan;
+    const colorFn =
+      (chalk as Record<ChalkColor, typeof chalk.cyan>)[(ws.color as ChalkColor) || 'cyan'] ||
+      chalk.cyan;
     return {
       name: `${index + 1}. ${colorFn(ws.name)}${
         ws.description ? chalk.gray(` - ${ws.description}`) : ''
@@ -363,7 +375,9 @@ export async function workspaceList() {
   console.log(chalk.cyan('\n📋 Configured Workspaces:\n'));
 
   config.workspaces.forEach((ws, index) => {
-    const colorFn = (chalk as any)[ws.color || 'cyan'] || chalk.cyan;
+    const colorFn =
+      (chalk as Record<ChalkColor, typeof chalk.cyan>)[(ws.color as ChalkColor) || 'cyan'] ||
+      chalk.cyan;
     console.log(chalk.bold(`${index + 1}. ${colorFn(ws.name)}`));
     if (ws.description) {
       console.log(chalk.gray(`   ${ws.description}`));

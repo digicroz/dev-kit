@@ -487,13 +487,15 @@ export async function buildAndroidRelease(
     try {
       execSync('npx expo prebuild', { stdio: 'pipe', cwd: process.cwd() });
       prebuildSpinner.succeed(chalk.green('✓ Expo prebuild completed'));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
+
       prebuildSpinner.fail(chalk.red('✗ Expo prebuild failed'));
       console.log(
         boxen(
           chalk.red('💥 Prebuild Failed') +
             '\n' +
-            chalk.white(error.message || 'Unknown error occurred'),
+            chalk.white(err.message || 'Unknown error occurred'),
           {
             padding: { top: 0, bottom: 0, left: 1, right: 1 },
             borderStyle: 'round',
@@ -568,14 +570,16 @@ export async function buildAndroidRelease(
 
       try {
         await runGradleCleanWithProgress();
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If clean fails completely, show help and continue
+        const err = error as Error;
+
         console.log(
           chalk.gray('Note: Clean process encountered issues, but continuing with build...'),
         );
 
         // Check if it's the specific Windows file lock error
-        if (error.message && error.message.includes('Unable to delete directory')) {
+        if (err.message && err.message.includes('Unable to delete directory')) {
           await handleWindowsFileLocks();
         }
       }
@@ -645,7 +649,7 @@ export async function buildAndroidRelease(
 
       // Get file size for additional info
       try {
-        const fs = require('fs');
+        const fs = await import('fs');
         const stats = fs.statSync(copiedApkPath);
         const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
 
@@ -688,12 +692,11 @@ export async function buildAndroidRelease(
     } else {
       copySpinner.warn(chalk.yellow('⚠ Could not copy APK to builds folder'));
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     console.log(
       boxen(
-        chalk.red('💥 Build Failed') +
-          '\n' +
-          chalk.white(error.message || 'Unknown error occurred'),
+        chalk.red('💥 Build Failed') + '\n' + chalk.white(err.message || 'Unknown error occurred'),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
           borderStyle: 'round',

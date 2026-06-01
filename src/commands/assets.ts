@@ -80,20 +80,21 @@ async function walk(dir: string): Promise<string[]> {
   }
   return files;
 }
+type Tree = { [key: string]: Tree | string };
 
-function setInTree(tree: any, pathParts: string[], leafValue: string): void {
+function setInTree(tree: Tree, pathParts: string[], leafValue: string): void {
   let node = tree;
   for (let i = 0; i < pathParts.length - 1; i++) {
     const part = pathParts[i];
     if (!node[part]) node[part] = {};
-    node = node[part];
+    node = node[part] as Tree;
   }
   node[pathParts[pathParts.length - 1]] = leafValue;
 }
 
-function sortObjectKeysDeep(obj: any): any {
+function sortObjectKeysDeep(obj: Tree | string): Tree | string {
   if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    const sorted: any = {};
+    const sorted: Tree = {};
     for (const key of Object.keys(obj).sort()) {
       sorted[key] = sortObjectKeysDeep(obj[key]);
     }
@@ -102,17 +103,17 @@ function sortObjectKeysDeep(obj: any): any {
   return obj;
 }
 
-function objectToTS(obj: any, indent = 0): string {
+function objectToTS(obj: Tree | string, indent = 0): string {
   const pad = '  '.repeat(indent);
   if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    const entries = Object.entries(obj).map(([k, v]) => {
+    const entries = Object.entries(obj as Tree).map(([k, v]) => {
       const key = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(k) ? k : JSON.stringify(k);
       return `${'  '.repeat(indent + 1)}${key}: ${objectToTS(v, indent + 1)}`;
     });
     return `{\n${entries.join(',\n')}\n${pad}}`;
   }
   // leaf is a variable name string
-  return obj;
+  return String(obj);
 }
 
 async function renameImagesInDirectory(
@@ -256,7 +257,7 @@ export const generateImageIndex = async (): Promise<void> => {
     const usedVarNames = new Set<string>();
     const imports: string[] = [];
     const typeImports: string[] = [];
-    const tree: any = {};
+    const tree: Tree = {};
 
     if (config.projectType === 'nextjs' && publicFiles.length > 0) {
       typeImports.push(`import type { StaticImageData } from "next/image";`);

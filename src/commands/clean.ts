@@ -192,7 +192,7 @@ export const clean = async () => {
 
   const rnDetected = await isReactNative();
   let cleanMode: 'all' | 'node' | 'rn-android' | 'rn-ios' =
-    (argv.mode as any) || (rnDetected ? 'all' : 'node');
+    argv.mode || (rnDetected ? 'all' : 'node');
 
   if (rnDetected && !argv.mode && !autoYes) {
     const { mode } = await inquirer.prompt({
@@ -225,7 +225,7 @@ export const clean = async () => {
   spinner.stop();
 
   const toDelete = expanded
-    .map((e: any) => ({
+    .map((e) => ({
       path: e.path,
       isDir: e.type === 'directory',
       pattern: e.pattern,

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import boxen from 'boxen';
 import * as gradientString from 'gradient-string';
-import ora, { Ora } from 'ora';
+import ora, { Ora, Spinner } from 'ora';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
@@ -69,7 +69,7 @@ export class UIHelper {
   public createSpinner(text: string, spinnerType: string = 'dots12'): Ora {
     const spinner = ora({
       text: chalk.cyan(text),
-      spinner: spinnerType as any,
+      spinner: spinnerType as unknown as Spinner,
       color: 'cyan',
     });
 
