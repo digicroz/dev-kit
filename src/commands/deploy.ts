@@ -12,12 +12,6 @@ interface DeployInfo {
   version: string;
 }
 
-interface PackageJson {
-  name?: string;
-  version?: string;
-  [key: string]: unknown;
-}
-
 interface DkConfig {
   deploy?: {
     uat?: string | string[];
