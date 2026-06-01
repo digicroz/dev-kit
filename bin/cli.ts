@@ -9,7 +9,7 @@ import gradientString from 'gradient-string';
 import ora from 'ora';
 
 import { clean } from '../src/commands/clean.js';
-import { deployUat, deployProd } from '../src/commands/deploy.js';
+import { deployUat, deployProd, releaseNpmPackage } from '../src/commands/deploy.js';
 import { doctor } from '../src/commands/doctor.js';
 import { buildAndroidRelease, buildAndroidDebug } from '../src/commands/reactNative.js';
 import { dev } from '../src/commands/dev.js';
@@ -76,10 +76,10 @@ function showProjectModeRequired() {
   console.log(
     createBox(
       chalk.red('⚠️ Project Mode Required') +
-        '\n' +
-        chalk.gray('This command requires dk.config.json') +
-        '\n' +
-        chalk.cyan("Run 'dk init' to create project configuration"),
+      '\n' +
+      chalk.gray('This command requires dk.config.json') +
+      '\n' +
+      chalk.cyan("Run 'dk init' to create project configuration"),
       'red',
       '#1a0000',
     ),
@@ -321,6 +321,15 @@ async function main() {
         showProjectModeRequired();
       }
 
+      const deployConfig = readConfig();
+      if (deployConfig?.projectType === 'npm-package') {
+        ui.error(
+          'Deploy unsupported',
+          "This project type uses 'dk release' instead of 'dk deploy'.",
+        );
+        return;
+      }
+
       try {
         console.log(
           createBox(
@@ -390,6 +399,14 @@ async function main() {
     .action(async (...args) => {
       const cmd = createEnhancedCommand('deploy prod', 'Deploying to prod', deployProd, true);
       await cmd.execute(...(args as Parameters<typeof deployProd>));
+    });
+
+  program
+    .command('release')
+    .description(chalk.gray('📦 Release npm package'))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand('release', 'Releasing npm package', releaseNpmPackage, true);
+      await cmd.execute(...args);
     });
 
   // React Native commands
@@ -702,50 +719,53 @@ async function main() {
     console.log(
       createBox(
         gradientString('blue', 'cyan')('💡 Pro Tips') +
-          '\n' +
-          chalk.gray('• Quick: ') +
-          chalk.cyan('dk c') +
-          chalk.gray(', ') +
-          chalk.cyan('dk dr') +
-          '\n' +
-          chalk.gray('• Dev: ') +
-          chalk.cyan('dk dev') +
-          '\n' +
-          chalk.gray('• Deploy: ') +
-          chalk.cyan('dk d dev') +
-          '\n' +
-          chalk.gray('• RN Release: ') +
-          chalk.cyan('dk rn br') +
-          '\n' +
-          chalk.gray('• RN Debug: ') +
-          chalk.cyan('dk rn bd') +
-          '\n' +
-          chalk.gray('• No Clean: ') +
-          chalk.cyan('dk rn brnc') +
-          '\n' +
-          chalk.gray('• Spring Boot: ') +
-          chalk.cyan('dk sb start') +
-          '\n' +
-          chalk.gray('• Generators: ') +
-          chalk.cyan('dk gen') +
-          '\n' +
-          chalk.gray('• Git Fix: ') +
-          chalk.cyan('dk git fix') +
-          '\n' +
-          chalk.gray('• Git Add & Commit: ') +
-          chalk.cyan('dk git ac') +
-          '\n' +
-          chalk.gray('• Git Add, Commit & Push: ') +
-          chalk.cyan('dk git acp') +
-          '\n' +
-          chalk.gray('• DB Status: ') +
-          chalk.cyan('dk db status') +
-          '\n' +
-          chalk.gray('• DB Dump: ') +
-          chalk.cyan('dk db dump create') +
-          '\n' +
-          chalk.gray('• Help: ') +
-          chalk.cyan('dk --help'),
+        '\n' +
+        chalk.gray('• Quick: ') +
+        chalk.cyan('dk c') +
+        chalk.gray(', ') +
+        chalk.cyan('dk dr') +
+        '\n' +
+        chalk.gray('• Dev: ') +
+        chalk.cyan('dk dev') +
+        '\n' +
+        chalk.gray('• Deploy: ') +
+        chalk.cyan('dk d dev') +
+        '\n' +
+        chalk.gray('• Release: ') +
+        chalk.cyan('dk release') +
+        '\n' +
+        chalk.gray('• RN Release: ') +
+        chalk.cyan('dk rn br') +
+        '\n' +
+        chalk.gray('• RN Debug: ') +
+        chalk.cyan('dk rn bd') +
+        '\n' +
+        chalk.gray('• No Clean: ') +
+        chalk.cyan('dk rn brnc') +
+        '\n' +
+        chalk.gray('• Spring Boot: ') +
+        chalk.cyan('dk sb start') +
+        '\n' +
+        chalk.gray('• Generators: ') +
+        chalk.cyan('dk gen') +
+        '\n' +
+        chalk.gray('• Git Fix: ') +
+        chalk.cyan('dk git fix') +
+        '\n' +
+        chalk.gray('• Git Add & Commit: ') +
+        chalk.cyan('dk git ac') +
+        '\n' +
+        chalk.gray('• Git Add, Commit & Push: ') +
+        chalk.cyan('dk git acp') +
+        '\n' +
+        chalk.gray('• DB Status: ') +
+        chalk.cyan('dk db status') +
+        '\n' +
+        chalk.gray('• DB Dump: ') +
+        chalk.cyan('dk db dump create') +
+        '\n' +
+        chalk.gray('• Help: ') +
+        chalk.cyan('dk --help'),
         'blue',
       ),
     );
@@ -818,7 +838,12 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: 'deploy',
     },
     {
-      name: '3. 📱 React Native Build',
+      name: '4. 📦 Release - Release npm package',
+      value: 'release',
+      command: 'release',
+    },
+    {
+      name: '5. 📱 React Native Build',
       value: 'rn:build',
       command: 'rn build',
     },
@@ -933,6 +958,10 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
       });
       if (environment === 'dev') await deployUat();
       else await deployProd();
+      break;
+    case 'release':
+      if (!projectMode) showProjectModeRequired();
+      await releaseNpmPackage();
       break;
     case 'rn':
       if (!projectMode) showProjectModeRequired();

@@ -1,128 +1,128 @@
 name: Main Branch PR Checker V3
 
 on:
-    pull_request:
-        branches: ["main"]
+  pull_request:
+    branches: ['main']
 
 env:
-    NODE_VERSION: "24.x"
+  NODE_VERSION: '24.x'
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-    check-updated-from-main:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout the repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0 # Ensure the full history is fetched
-                  ref: ${{ github.event.pull_request.head.ref }}
+  check-updated-from-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Ensure the full history is fetched
+          ref: ${{ github.event.pull_request.head.ref }}
 
-            - name: Fetch all branches
-              run: git fetch --all
+      - name: Fetch all branches
+        run: git fetch --all
 
-            - name: Check if PR is up to date with main
-              run: |
-                  BASE_SHA=$(git merge-base origin/main HEAD)
-                  MAIN_SHA=$(git rev-parse origin/main)
-                  echo "BASE_SHA: $BASE_SHA"
-                  echo "MAIN_SHA: $MAIN_SHA"
-                  if [ "$BASE_SHA" != "$MAIN_SHA" ]; then
-                    echo "This PR is not up to date with the main branch."
-                    exit 1
-                  else
-                    echo "This PR is up to date with the main branch."
-                  fi
+      - name: Check if PR is up to date with main
+        run: |
+          BASE_SHA=$(git merge-base origin/main HEAD)
+          MAIN_SHA=$(git rev-parse origin/main)
+          echo "BASE_SHA: $BASE_SHA"
+          echo "MAIN_SHA: $MAIN_SHA"
+          if [ "$BASE_SHA" != "$MAIN_SHA" ]; then
+            echo "This PR is not up to date with the main branch."
+            exit 1
+          else
+            echo "This PR is up to date with the main branch."
+          fi
 
-    check-restricted-paths:
-        needs: ["check-updated-from-main"]
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout the repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0 # Ensure the full history is fetched
-                  ref: ${{ github.event.pull_request.head.ref }}
+  check-restricted-paths:
+    needs: ['check-updated-from-main']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Ensure the full history is fetched
+          ref: ${{ github.event.pull_request.head.ref }}
 
-            - name: Check for changes in restricted paths
-              run: |
-                  # Define the array of restricted paths
-                  RESTRICTED_PATHS=(
-                   ".github"
-                   ".husky"
-                   ".vscode"
-                   ".editorconfig"
-                   ".env"
-                   ".env.dev"
-                   ".gitattributes"
-                   ".gitignore"
-                   ".prettierignore"
-                   ".prettierrc.json"
-                   "dk.config.json"
-                   "eslint.config.js"
-                   "nsk.config.json"
-                   "package-lock.json"
-                   "package.json"
-                   "tsconfig.json"
-                  )
-                  # Get the base commit SHA
-                  BASE_SHA=$(git merge-base origin/main HEAD)
+      - name: Check for committed env files
+        run: |
+          FILES=$(git diff --name-only origin/main...HEAD)
 
-                  # Get the list of files changed in the PR
-                  CHANGED_FILES=$(git diff --name-only $BASE_SHA HEAD)
+          if echo "$FILES" | grep -qE '(^|/)\.env($|\.)'; then
+            echo "❌ .env files detected in PR"
+            exit 1
+          fi
 
+      - name: Check for changes in restricted paths
+        run: |
+          # Define the array of restricted paths
+          RESTRICTED_PATHS=(
+           ".github"
+           ".husky"
+           ".vscode"
+           ".editorconfig"
+           ".env"
+           ".env.dev"
+           ".gitattributes"
+           ".gitignore"
+           ".prettierignore"
+           ".prettierrc.json"
+           "dk.config.json"
+           "eslint.config.js"
+           "nsk.config.json"
+           "package-lock.json"
+           "package.json"
+           "tsconfig.json"
+          )
+          # Get the base commit SHA
+          BASE_SHA=$(git merge-base origin/main HEAD)
 
-                  # Check if any of the restricted paths are in the list of changed files
-                  for path in "${RESTRICTED_PATHS[@]}"; do
-                    if echo "$CHANGED_FILES" | grep -qE "^${path}"; then
-                      echo "Error: Pull request contains changes in restricted path: $path."
-                      echo "Run 'npm run undo-restricted-changes' to undo the changes."
-                      exit 1
-                    fi
-                  done
-
-    check-main-pr-code:
-        needs: ["check-updated-from-main", "check-restricted-paths"]
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: "Checkout GitHub Action"
-              uses: actions/checkout@v4
-
-            - name: "Setup Node"
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-
-            - name: Check Current Directory
-              run: pwd
-
-            - name: Check for committed env files
-              run: |
-                  FILES=$(git diff --name-only origin/main...HEAD)
-            
-                  if echo "$FILES" | grep -qE '(^|/)\.env($|\.)'; then
-                    echo "❌ .env files detected in PR"
-                    exit 1
-                  fi
-            - name: Install Dependencies
-              run: npm ci
-
-            - name: Lint Project
-              run: npm run format:check
+          # Get the list of files changed in the PR
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA HEAD)
 
 
-            - name: Lint Project
-              run: npm run lint:check
+          # Check if any of the restricted paths are in the list of changed files
+          for path in "${RESTRICTED_PATHS[@]}"; do
+            if echo "$CHANGED_FILES" | grep -qE "^${path}"; then
+              echo "Error: Pull request contains changes in restricted path: $path."
+              echo "Run 'npm run undo-restricted-changes' to undo the changes."
+              exit 1
+            fi
+          done
 
-            - name: Compile TypeScript
-              run: npm run typecheck
+  check-main-pr-code:
+    needs: ['check-updated-from-main', 'check-restricted-paths']
+    runs-on: ubuntu-latest
 
-            # - name: Build Project
-            #   run: npm run build
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v4
 
-            # - name: Remove all files
-            #   run: rm -rf .[!.]* *
+      - name: 'Setup Node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check Current Directory
+        run: pwd
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint Project
+        run: npm run format:check
+
+      - name: Lint Project
+        run: npm run lint:check
+
+      - name: Compile TypeScript
+        run: npm run typecheck
+
+      - name: Build Project
+        run: npm run build
+
+      # - name: Remove all files
+      #   run: rm -rf .[!.]* *

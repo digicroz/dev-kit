@@ -4,11 +4,27 @@ import path from 'path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { ui } from '../utils/ui-helpers.js';
+import { readConfig } from '../utils/config.js';
 
 interface DeployInfo {
   last_deploy: string;
   hash: string;
   version: string;
+}
+
+interface PackageJson {
+  name?: string;
+  version?: string;
+  [key: string]: unknown;
+}
+
+interface DkConfig {
+  deploy?: {
+    uat?: string | string[];
+    prod?: string | string[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
 }
 
 /**
@@ -59,7 +75,7 @@ function readPackageJson(): PackageJson {
   const packagePath = getPackageJsonPath();
   try {
     const content = fs.readFileSync(packagePath, 'utf8');
-    return JSON.parse(content);
+    return JSON.parse(content) as PackageJson;
   } catch (error) {
     displayError('Failed to read or parse package.json.');
   }
@@ -94,6 +110,118 @@ function readDeployInfo(): DeployInfo | null {
       chalk.yellow('Warning: Failed to read deploy.json, treating as first deployment.'),
     );
     return null;
+  }
+}
+
+/**
+ * Read dk.config.json if it exists and return parsed object
+ */
+function readDkConfig(): DkConfig | null {
+  const cfgPath = path.join(process.cwd(), 'dk.config.json');
+  if (!fs.existsSync(cfgPath)) return null;
+
+  try {
+    const content = fs.readFileSync(cfgPath, 'utf8');
+    return JSON.parse(content) as DkConfig;
+  } catch (error) {
+    console.warn(chalk.yellow('Warning: Failed to read dk.config.json, ignoring.'));
+    return null;
+  }
+}
+
+function isNpmLoggedIn(): boolean {
+  try {
+    const result = execSync('npm whoami', { encoding: 'utf8', stdio: 'pipe' }).toString().trim();
+    return result.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureNpmLogin(): Promise<void> {
+  if (isNpmLoggedIn()) {
+    return;
+  }
+
+  ui.warning('NPM login required', 'You must be logged in to npm before releasing a package.');
+
+  const { loginNow } = await inquirer.prompt({
+    type: 'confirm',
+    name: 'loginNow',
+    message: 'You are not logged in to npm. Would you like to run npm login now?',
+    default: true,
+  });
+
+  if (!loginNow) {
+    displayError('NPM login is required to release npm packages.');
+  }
+
+  const loginProcess = spawn('npm', ['login'], { stdio: 'inherit' });
+
+  await new Promise<void>((resolve, reject) => {
+    loginProcess.on('exit', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`npm login exited with code ${code}`));
+      }
+    });
+    loginProcess.on('error', reject);
+  });
+
+  if (!isNpmLoggedIn()) {
+    displayError('NPM login failed or was not completed.');
+  }
+}
+
+export const releaseNpmPackage = async () => {
+  const config = readConfig();
+  if (!config) {
+    displayError('dk.config.json not found. Run dk init first.');
+  }
+
+  if (config.projectType !== 'npm-package') {
+    displayError(
+      "Release is only supported for 'npm-package' projects. Use dk deploy for other project types.",
+    );
+  }
+
+  await ensureNpmLogin();
+
+  const { releaseType } = await inquirer.prompt({
+    type: 'list',
+    name: 'releaseType',
+    message: 'Select release type:',
+    choices: [
+      { name: 'Patch (bug fixes)', value: 'patch' },
+      { name: 'Minor (new features)', value: 'minor' },
+      { name: 'Major (breaking changes)', value: 'major' },
+    ],
+    default: 'patch',
+  });
+
+  console.log(chalk.blue(`📦 Running npm version ${releaseType}...`));
+  executeCommand(
+    `npm version ${releaseType}`,
+    `Failed to bump package version using npm version ${releaseType}`,
+  );
+  console.log(chalk.green(`✅ Package version updated with npm version ${releaseType}`));
+};
+
+/**
+ * Run one or more custom commands (string or array) with output streamed to console
+ */
+function runCustomCommands(commands: string | string[], envName: string) {
+  const cmds = Array.isArray(commands) ? commands : [commands];
+
+  ui.info(`Running custom deploy commands for ${envName}`, cmds.join(' && '));
+
+  for (const cmd of cmds) {
+    try {
+      execSync(cmd, { stdio: 'inherit' });
+    } catch (error) {
+      displayError(`Custom command failed (${cmd}): ${error}`);
+    }
   }
 }
 
@@ -212,6 +340,18 @@ async function promptToCreateBranch(branchName: string): Promise<boolean> {
 export const deployUat = async () => {
   console.log(chalk.blue('🚀 Deploying to UAT environment...'));
 
+  const config = readConfig();
+  if (config?.projectType === 'npm-package') {
+    displayError("Deploy is not supported for 'npm-package' projects. Use 'dk release' instead.");
+  }
+
+  // If dk.config.json provides custom deploy commands for uat, run them instead
+  const dkConfig = readDkConfig();
+  if (dkConfig?.deploy?.uat) {
+    runCustomCommands(dkConfig.deploy.uat, 'uat');
+    return;
+  }
+
   try {
     // Check if uat branch exists on remote
     if (!checkRemoteBranchExists('uat')) {
@@ -237,6 +377,18 @@ export const deployUat = async () => {
  */
 export const deployProd = async () => {
   console.log(chalk.blue('🚀 Starting production deployment...'));
+
+  const config = readConfig();
+  if (config?.projectType === 'npm-package') {
+    displayError("Deploy is not supported for 'npm-package' projects. Use 'dk release' instead.");
+  }
+
+  // If dk.config.json provides custom deploy commands for prod, run them instead
+  const dkConfig = readDkConfig();
+  if (dkConfig?.deploy?.prod) {
+    runCustomCommands(dkConfig.deploy.prod, 'prod');
+    return;
+  }
 
   // Check if stable branch exists on remote
   if (!checkRemoteBranchExists('stable')) {
