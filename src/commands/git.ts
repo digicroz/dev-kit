@@ -4,7 +4,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { readConfig } from '../utils/config.js';
 import { DKProjectType } from '../types/config.js';
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 type GitConfigScope = 'local' | 'global' | 'both';
@@ -453,10 +453,164 @@ const resolvePathPatterns = (patterns: string[]): string[] => {
           resolved.push(`./${candidatePath}`);
         }
       }
-    } catch {}
+    } catch { }
   }
 
   return resolved;
+};
+
+const findS2CDirectory = (): string | null => {
+  const candidates = ['_s2c', 'b2fPortal'];
+  for (const candidate of candidates) {
+    const candidatePath = resolve(process.cwd(), candidate);
+    if (existsSync(candidatePath) && statSync(candidatePath).isDirectory()) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+const ensureS2CIgnoreEntry = (s2cDir: string): { changed: boolean; pattern: string } => {
+  const gitignorePath = resolve(process.cwd(), '.gitignore');
+  const pattern = `${s2cDir}/**/file_details.json`;
+  const marker = '# s2c files';
+
+  const content = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf8') : '';
+  const lines = content.split(/\r?\n/);
+  const hasPattern = lines.some((line) => line.trim() === pattern);
+  const hasMarker = lines.some((line) => line.trim() === marker);
+
+  if (hasPattern) {
+    return { changed: false, pattern };
+  }
+
+  let updatedLines = [...lines];
+
+  if (!content) {
+    updatedLines = [marker, pattern, ''];
+  } else if (hasMarker) {
+    const markerIndex = updatedLines
+      .map((line) => line.trim())
+      .lastIndexOf(marker);
+    updatedLines.splice(markerIndex + 1, 0, pattern);
+    if (updatedLines[updatedLines.length - 1].trim() !== '') {
+      updatedLines.push('');
+    }
+  } else {
+    if (updatedLines[updatedLines.length - 1].trim() !== '') {
+      updatedLines.push('');
+    }
+    updatedLines.push(marker, pattern, '');
+  }
+
+  writeFileSync(gitignorePath, updatedLines.join('\n'), 'utf8');
+  return { changed: true, pattern };
+};
+
+const removeGitCachedPaths = async (pattern: string): Promise<string[]> => {
+  const lsResult = await runGitCommand(['ls-files', '--', pattern]);
+
+  if (!lsResult.success || !lsResult.output) {
+    return [];
+  }
+
+  const trackedPaths = lsResult.output
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  if (trackedPaths.length === 0) {
+    return [];
+  }
+
+  await runGitCommand(['rm', '--cached', '--ignore-unmatch', '--', ...trackedPaths]);
+  return trackedPaths;
+};
+
+export const gitS2CFix = async () => {
+  ui.section('🛠️ Git S2C Fix', 'Ignore s2c file_details.json and remove tracked copies');
+
+  const gitStatusResult = await runGitCommand(['status', '--porcelain']);
+  const isGitRepo = gitStatusResult.success;
+
+  if (!isGitRepo) {
+    ui.error('Not in a git repository', 'Please run this command from a git repository.');
+    return { ok: false, error: 'not_git_repo' };
+  }
+
+  const s2cDir = findS2CDirectory();
+  if (!s2cDir) {
+    ui.error('No s2c directory found', 'Expected _s2c or b2fPortal at repository root.');
+    return { ok: false, error: 'no_s2c_dir' };
+  }
+
+  const { changed, pattern } = ensureS2CIgnoreEntry(s2cDir);
+
+  if (changed) {
+    ui.info('Updating .gitignore', `Adding ignore rule for ${pattern}`);
+    const addResult = await runGitCommand(['add', '.gitignore']);
+
+    if (!addResult.success) {
+      ui.error('Failed to stage .gitignore', addResult.error || 'Unknown error');
+      return { ok: false, error: 'git_add_failed' };
+    }
+
+    const commitResult = await runGitCommand([
+      'commit',
+      '--only',
+      '-m',
+      `fix: ignore ${pattern}`,
+      '--',
+      '.gitignore',
+    ]);
+
+    if (!commitResult.success) {
+      ui.error('Failed to commit .gitignore', commitResult.error || 'Unknown error');
+      return { ok: false, error: 'git_commit_failed' };
+    }
+
+    ui.success('Committed .gitignore change', `Ignored ${pattern}`);
+  } else {
+    ui.info('No .gitignore change needed', `Pattern already present: ${pattern}`);
+  }
+
+  const removedPaths = await removeGitCachedPaths(pattern);
+
+  if (removedPaths.length > 0) {
+    ui.success(
+      'Removed tracked file_details.json entries',
+      `${removedPaths.length} tracked file(s) removed from git index`,
+    );
+
+    const commitResult = await runGitCommand([
+      'commit',
+      '--only',
+      '-m',
+      `fix: untrack ${s2cDir}/**/file_details.json`,
+      '--',
+      ...removedPaths,
+    ]);
+
+    if (!commitResult.success) {
+      ui.error('Failed to commit untracked paths', commitResult.error || 'Unknown error');
+      return { ok: false, error: 'git_commit_removed_failed' };
+    }
+
+    ui.success(
+      'Committed index cleanup',
+      `Removed ${removedPaths.length} tracked file_details.json file(s) from git`,
+    );
+  } else {
+    ui.info('No tracked file_details.json found', 'No cached files needed removal.');
+  }
+
+  return {
+    ok: true,
+    s2cDir,
+    ignorePattern: pattern,
+    removedPaths,
+  };
 };
 
 export const gitAutoCommit = async () => {
