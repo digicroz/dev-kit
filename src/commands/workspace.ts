@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync } from 'fs';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { ui } from '../utils/ui-helpers.js';
 import {
@@ -129,7 +129,10 @@ async function executeAction(
     case 'open-in-zed':
       console.log(chalk.gray(`  → Opening ${moduleName} in Zed...`));
       try {
-        await execAsync(`zed "${modulePath}"`);
+        spawn('zed', ['-n', modulePath], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
         console.log(chalk.green(`  ✓ Opened ${moduleName} in Zed`));
       } catch (error: any) {
         console.log(chalk.red(`  ✗ Failed to open in Zed: ${error.message}`));
