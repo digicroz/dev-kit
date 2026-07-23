@@ -2,6 +2,7 @@
 
 export type ActionType =
   | 'open-in-vscode'
+  | 'open-in-zed'
   | 'open-in-antigravity'
   | 'run-command'
   | 'run-script'

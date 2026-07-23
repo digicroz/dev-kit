@@ -126,6 +126,16 @@ async function executeAction(
       }
       break;
 
+    case 'open-in-zed':
+      console.log(chalk.gray(`  → Opening ${moduleName} in Zed...`));
+      try {
+        await execAsync(`code "${modulePath}"`);
+        console.log(chalk.green(`  ✓ Opened ${moduleName} in Zed`));
+      } catch (error: any) {
+        console.log(chalk.red(`  ✗ Failed to open in Zed: ${error.message}`));
+      }
+      break;
+
     case 'open-in-antigravity':
       console.log(chalk.gray(`  → Opening ${moduleName} in Antigravity...`));
       try {
@@ -265,9 +275,8 @@ export async function workspace() {
   const workspaceChoices = config.workspaces.map((ws, index) => {
     const colorFn = (chalk as any)[ws.color || 'cyan'] || chalk.cyan;
     return {
-      name: `${index + 1}. ${colorFn(ws.name)}${
-        ws.description ? chalk.gray(` - ${ws.description}`) : ''
-      }`,
+      name: `${index + 1}. ${colorFn(ws.name)}${ws.description ? chalk.gray(` - ${ws.description}`) : ''
+        }`,
       value: ws.name,
       short: ws.name,
     };
