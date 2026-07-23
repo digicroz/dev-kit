@@ -129,7 +129,7 @@ async function executeAction(
     case 'open-in-zed':
       console.log(chalk.gray(`  → Opening ${moduleName} in Zed...`));
       try {
-        await execAsync(`code "${modulePath}"`);
+        await execAsync(`zed "${modulePath}"`);
         console.log(chalk.green(`  ✓ Opened ${moduleName} in Zed`));
       } catch (error: any) {
         console.log(chalk.red(`  ✗ Failed to open in Zed: ${error.message}`));
