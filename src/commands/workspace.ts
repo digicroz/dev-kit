@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync } from 'fs';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { ui } from '../utils/ui-helpers.js';
 import {
@@ -123,6 +123,19 @@ async function executeAction(
         console.log(chalk.green(`  ✓ Opened ${moduleName} in VS Code`));
       } catch (error: any) {
         console.log(chalk.red(`  ✗ Failed to open in VS Code: ${error.message}`));
+      }
+      break;
+
+    case 'open-in-zed':
+      console.log(chalk.gray(`  → Opening ${moduleName} in Zed...`));
+      try {
+        spawn('zed', ['-n', modulePath], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
+        console.log(chalk.green(`  ✓ Opened ${moduleName} in Zed`));
+      } catch (error: any) {
+        console.log(chalk.red(`  ✗ Failed to open in Zed: ${error.message}`));
       }
       break;
 
@@ -265,9 +278,8 @@ export async function workspace() {
   const workspaceChoices = config.workspaces.map((ws, index) => {
     const colorFn = (chalk as any)[ws.color || 'cyan'] || chalk.cyan;
     return {
-      name: `${index + 1}. ${colorFn(ws.name)}${
-        ws.description ? chalk.gray(` - ${ws.description}`) : ''
-      }`,
+      name: `${index + 1}. ${colorFn(ws.name)}${ws.description ? chalk.gray(` - ${ws.description}`) : ''
+        }`,
       value: ws.name,
       short: ws.name,
     };

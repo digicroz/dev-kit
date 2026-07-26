@@ -20,7 +20,7 @@ import { init as runInit } from '../src/commands/init.js';
 import { updateConfig } from '../src/commands/config.js';
 import { startSpringBootServices, buildSpringBootServices } from '../src/commands/springBoot.js';
 import { gen } from '../src/commands/gen.js';
-import { gitFix, gitAddCommit, gitAddCommitPush, gitAutoCommit } from '../src/commands/git.js';
+import { gitFix, gitAddCommit, gitAddCommitPush, gitAutoCommit, gitS2CFix } from '../src/commands/git.js';
 import { dbStatus, dbDumpCreate, dbDumpApply, dbDropAllTables } from '../src/commands/database.js';
 import {
   workspace,
@@ -673,6 +673,20 @@ cloneCommand
       await cmd.execute(...args);
     });
 
+  const s2cCommand = program.command('s2c').description(chalk.gray('🔧 S2C git tools'));
+
+  s2cCommand
+    .command('fix')
+    .description(chalk.gray('🔧 Fix s2c ignore and untrack file_details.json'))
+    .action(async (...args) => {
+      const cmd = createEnhancedCommand(
+        'S2C fix',
+        'Fixing s2c ignore rules and removing tracked file_details.json',
+        gitS2CFix,
+      );
+      await cmd.execute(...args);
+    });
+
   gitCommand
     .command('commit')
     .description(chalk.gray('🔄 Auto-commit project-specific files'))
@@ -791,6 +805,9 @@ cloneCommand
         chalk.gray('• Git Fix: ') +
         chalk.cyan('dk git fix') +
         '\n' +
+        chalk.gray('• S2C Fix: ') +
+        chalk.cyan('dk s2c fix') +
+        '\n' +
         chalk.gray('• Git Add & Commit: ') +
         chalk.cyan('dk git ac') +
         '\n' +
@@ -843,12 +860,17 @@ async function showInteractiveMenu(projectMode: boolean) {
       command: 'git fix',
     },
     {
-      name: '5. 📝 Git Add & Commit - Stage and commit',
+      name: '5. 🔧 S2C Fix - Ignore s2c file_details.json',
+      value: 's2c:fix',
+      command: 's2c fix',
+    },
+    {
+      name: '6. 📝 Git Add & Commit - Stage and commit',
       value: 'git:ac',
       command: 'git ac',
     },
     {
-      name: '6. 🚀 Git Add, Commit & Push',
+      name: '7. 🚀 Git Add, Commit & Push',
       value: 'git:acp',
       command: 'git acp',
     },
@@ -915,12 +937,17 @@ async function showInteractiveMenu(projectMode: boolean) {
     },
     { name: '10. 📝 Git Add & Commit', value: 'git:ac', command: 'git ac' },
     {
-      name: '11. 🚀 Git Add, Commit & Push',
+      name: '11. 🔧 S2C Fix - Ignore s2c file_details.json',
+      value: 's2c:fix',
+      command: 's2c fix',
+    },
+    {
+      name: '12. 🚀 Git Add, Commit & Push',
       value: 'git:acp',
       command: 'git acp',
     },
     {
-      name: '12. ❓ Help - Show all commands',
+      name: '13. ❓ Help - Show all commands',
       value: 'help',
       command: '--help',
     },
