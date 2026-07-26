@@ -1,17 +1,13 @@
-import { exec, execSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import inquirer from "inquirer";
-import os from "node:os";
-import path, { dirname, join } from "path";
-import { promisify } from "util";
-import { CloneConfig, osTypes } from "../types/clone";
-import {
-  getCloneConfigPath,
-  readCloneConfig,
-  writeCloneConfig,
-} from "../utils/clone-config";
-import { ui } from "../utils/ui-helpers";
-import fs from "fs";
+import { exec, execSync } from 'child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import inquirer from 'inquirer';
+import os from 'node:os';
+import path, { dirname, join } from 'path';
+import { promisify } from 'util';
+import { CloneConfig, osTypes } from '../types/clone';
+import { getCloneConfigPath, readCloneConfig, writeCloneConfig } from '../utils/clone-config';
+import { ui } from '../utils/ui-helpers';
+import fs from 'fs';
 const execAsync = promisify(exec);
 
 function getRootDrives(): Promise<string[]> {
@@ -22,7 +18,7 @@ function getRootDrives(): Promise<string[]> {
         if (err) return reject(err);
 
         const drives = stdout
-          .split("\n")
+          .split('\n')
           .map((line) => line.trim())
           .filter((line) => /^[A-Z]$/.test(line))
           .map((letter) => `${letter}:`);
@@ -32,14 +28,14 @@ function getRootDrives(): Promise<string[]> {
   });
 }
 async function formatTargetDir(repoUrl: string): Promise<string> {
-  const parts = repoUrl.split("/");
+  const parts = repoUrl.split('/');
   let repoName = parts[parts.length - 1];
-  if (!repoName.includes("--")) {
-    ui.error("Invalid repository link. Expected format: project--module");
+  if (!repoName.includes('--')) {
+    ui.error('Invalid repository link. Expected format: project--module');
     process.exit(1);
   }
 
-  repoName = repoName.replace(/--/g, "/");
+  repoName = repoName.replace(/--/g, '/');
 
   const config = readCloneConfig();
   let baseDir: string;
@@ -50,23 +46,23 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
 
     osType = os.platform() as osTypes;
 
-    if (osType === "win32") {
+    if (osType === 'win32') {
       const drives = await getRootDrives();
       const { dirChoice } = await inquirer.prompt({
-        type: "list",
-        name: "dirChoice",
-        message: "Choose a base directory option:",
+        type: 'list',
+        name: 'dirChoice',
+        message: 'Choose a base directory option:',
         choices: drives,
       });
       baseDir = dirChoice;
     } else {
       const { chosenDir } = await inquirer.prompt({
-        type: "list",
-        name: "chosenDir",
-        message: "Choose a base directory:",
+        type: 'list',
+        name: 'chosenDir',
+        message: 'Choose a base directory:',
         choices: [
-          { name: "Root Directory (/root)", value: "/root" },
-          { name: "Home Directory (~)", value: os.homedir() },
+          { name: 'Root Directory (/root)', value: '/root' },
+          { name: 'Home Directory (~)', value: os.homedir() },
         ],
       });
 
@@ -74,7 +70,7 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
     }
 
     //save config
-    const newConfig: CloneConfig = { version: "1.0.0", clones: [] };
+    const newConfig: CloneConfig = { version: '1.0.0', clones: [] };
     newConfig.clones.push({ os: osType, baseDir });
     writeCloneConfig(newConfig);
   } else {
@@ -82,29 +78,29 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
     osType = config.clones[0].os;
   }
 
-  return path.join(baseDir, "digicroz-repos", repoName);
+  return path.join(baseDir, 'digicroz-repos', repoName);
 }
 
 export const clone = async (reposUrl?: string) => {
-  let repoUrl = process.argv[3] || reposUrl;
+  const repoUrl = process.argv[3] || reposUrl;
 
   if (!repoUrl) {
-    ui.error("No repository URL provided. Usage: dk clone <repo-url>");
+    ui.error('No repository URL provided. Usage: dk clone <repo-url>');
     process.exit(1);
   }
 
   const targetDir = await formatTargetDir(repoUrl);
-  ui.section("📦 Clone Repository", `Cloning ${repoUrl} into ${targetDir}`);
+  ui.section('📦 Clone Repository', `Cloning ${repoUrl} into ${targetDir}`);
   if (existsSync(targetDir)) {
     const { overwrite } = await inquirer.prompt({
-      type: "confirm",
-      name: "overwrite",
+      type: 'confirm',
+      name: 'overwrite',
       message: `The directory ${targetDir} already exists. Do you want to delete it and re‑clone?`,
       default: false,
     });
 
     if (!overwrite) {
-      ui.info("Clone cancelled. Existing directory was not modified.");
+      ui.info('Clone cancelled. Existing directory was not modified.');
       return;
     }
 
@@ -115,14 +111,14 @@ export const clone = async (reposUrl?: string) => {
   try {
     ui.info(`Running git clone ${repoUrl} ${targetDir}...`);
     execSync(`git clone ${repoUrl} ${targetDir}`, {
-      stdio: "inherit",
+      stdio: 'inherit',
       cwd: process.cwd(),
     });
-    ui.success("Repository cloned successfully!", `Cloned into ${targetDir}`);
+    ui.success('Repository cloned successfully!', `Cloned into ${targetDir}`);
   } catch (error) {
     ui.error(
-      "Failed to start development server",
-      error instanceof Error ? error.message : "Unknown error",
+      'Failed to start development server',
+      error instanceof Error ? error.message : 'Unknown error',
     );
     process.exit(1);
   }
@@ -130,10 +126,10 @@ export const clone = async (reposUrl?: string) => {
 export function clearCloneConfig(): void {
   const configPath = getCloneConfigPath();
   if (existsSync(configPath)) {
-    const emptyConfig: CloneConfig = { version: "1.0.0", clones: [] };
-    writeFileSync(configPath, JSON.stringify(emptyConfig, null, 2), "utf-8");
-    ui.info("Clone config cleared successfully.");
+    const emptyConfig: CloneConfig = { version: '1.0.0', clones: [] };
+    writeFileSync(configPath, JSON.stringify(emptyConfig, null, 2), 'utf-8');
+    ui.info('Clone config cleared successfully.');
   } else {
-    ui.info("No clone config file found to clear.");
+    ui.info('No clone config file found to clear.');
   }
 }
