@@ -1,13 +1,13 @@
 // Main entry point for the advanced development kit
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-export * from './commands/clean';
-export * from './commands/git';
-export * from './commands/gen';
-export * from './commands/assets';
-export * from './commands/dev';
+import { readFileSync } from "fs"
+import { join, dirname } from "path"
+import { fileURLToPath } from "url"
+export * from "./commands/clone"
+export * from "./commands/clean"
+export * from "./commands/git"
+export * from "./commands/gen"
+export * from "./commands/assets"
+export * from "./commands/dev"
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

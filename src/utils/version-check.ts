@@ -1,9 +1,9 @@
-import { promises as fs } from 'fs';
-import https from 'https';
-import os from 'os';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { ui } from './ui-helpers.js';
+import { promises as fs } from "fs"
+import https from "https"
+import os from "node:os"
+import { fileURLToPath } from "url"
+import { dirname, join } from "path"
+import { ui } from "./ui-helpers.js"
 
 const PACKAGE_NAME = '@digicroz/dev-kit';
 const REGISTRY_URL = `https://registry.npmjs.org/@digicroz%2Fdev-kit/latest`;
