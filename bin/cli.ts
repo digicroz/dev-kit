@@ -271,7 +271,7 @@ cloneCommand
       "clone",
       "Starting development server",
       clone,
-      true,
+      false,
     );
     await cmd.execute(...args)
   })
@@ -285,7 +285,7 @@ cloneCommand
         "clone configuration",
         "Clear Clone configuration",
         clearCloneConfig,
-        true,
+        false,
       );
       await cmd.execute(...args)
     })
