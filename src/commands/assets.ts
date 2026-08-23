@@ -167,7 +167,7 @@ export const generateImageIndex = async (): Promise<void> => {
     process.exit(1);
   }
 
-  const supportedTypes = ['vite-react', 'react-native-cli', 'nextjs', 'angular'];
+  const supportedTypes = ['tanstack-start', 'vite-react', 'react-native-cli', 'nextjs', 'angular'];
   if (!supportedTypes.includes(config.projectType)) {
     ui.error(
       'Unsupported project type',

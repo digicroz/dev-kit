@@ -52,6 +52,7 @@ export function writeConfig(
 export function detectProjectType(rootDir: string = process.cwd()): DKProjectType | null {
   // node-express: look for express in package.json deps
   // node-fastify: look for fastify in package.json deps
+  // tanstack-start: look for TanStack Start in package.json deps
   // vite-react: look for vite and react in package.json deps
   // react-native-cli: look for react-native in package.json deps
   // nextjs: look for next in package.json deps
@@ -66,6 +67,7 @@ export function detectProjectType(rootDir: string = process.cwd()): DKProjectTyp
     if (!existsSync(pkgPath)) return null;
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    if (deps['@tanstack/react-start'] || deps['@tanstack/start']) return 'tanstack-start';
     if (deps['next']) return 'nextjs';
     if (deps['@angular/core']) return 'angular';
     if (deps['express']) return 'node-express';

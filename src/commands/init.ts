@@ -20,6 +20,7 @@ import type {
 const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
   { name: 'Node.js (Express)', value: 'node-express' },
   { name: 'Node.js (Fastify)', value: 'node-fastify' },
+  { name: 'TanStack Start', value: 'tanstack-start' },
   { name: 'Vite + React', value: 'vite-react' },
   { name: 'React Native CLI', value: 'react-native-cli' },
   { name: 'React Native Expo', value: 'react-native-expo' },
@@ -44,7 +45,7 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
     try {
       const settingsContent = await fs.readFile(settingsPath, 'utf8');
       settings = JSON.parse(settingsContent);
-    } catch (error) {}
+    } catch (error) { }
   }
 
   if (!settings['files.readonlyInclude']) {
@@ -111,6 +112,7 @@ export async function init() {
     }
 
     const frontendTypes: DKProjectType[] = [
+      'tanstack-start',
       'vite-react',
       'react-native-cli',
       'react-native-expo',
@@ -310,6 +312,7 @@ async function configureGenerators(
     defaultImageDir = 'images';
   } else {
     switch (projectType) {
+      case 'tanstack-start':
       case 'vite-react':
       case 'react-native-cli':
       case 'react-native-expo':

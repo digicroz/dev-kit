@@ -11,6 +11,7 @@ export const gen = async (): Promise<void> => {
   }
 
   const supportedTypes = [
+    'tanstack-start',
     'vite-react',
     'react-native-cli',
     'react-native-expo',
