@@ -650,6 +650,12 @@ export const gitAutoCommit = async () => {
       candidatePaths = ['src/*/_prisma', './src/_s2s'];
       commitMessage = '_prisma and s2s changes';
       break;
+    case 'tanstack-start':
+      ui.info('Project type', 'tanstack-start');
+      candidatePaths = ['src/*/_prisma', './prisma', './src/_s2s', './b2fPortal', './_s2c'];
+      commitMessage = '_prisma and s2s changes';
+      break;
+
 
     case 'npm-package':
       ui.info('Project type', 'npm-package');
