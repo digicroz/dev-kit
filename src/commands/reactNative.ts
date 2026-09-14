@@ -127,7 +127,12 @@ function performSystemCheck(): void {
 }
 
 // Enhanced build function with detailed progress
-function runGradleBuildWithProgress(buildCommand: string, buildType: string): Promise<void> {
+
+
+function runGradleBuildWithProgress(
+  buildCommand: string,
+  buildType: string,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const spinner = ora({
       text: chalk.cyan(`Starting ${buildType} build...`),
@@ -135,113 +140,170 @@ function runGradleBuildWithProgress(buildCommand: string, buildType: string): Pr
       color: 'cyan',
     }).start();
 
-    const gradleProcess = spawn('cmd', ['/c', `cd android && gradlew.bat ${buildCommand}`], {
-      cwd: process.cwd(),
-      stdio: 'pipe',
-    });
+    const env = {
+      ...process.env,
+    };
 
-    let currentTask = '';
-    let progress = 0;
-    const progressSteps = [
-      'Preparing build',
-      'Compiling sources',
-      'Processing resources',
-      'Building APK',
-      'Signing APK',
-      'Finalizing',
-    ];
 
-    // Update progress periodically
-    const progressInterval = setInterval(() => {
-      progress = Math.min(progress + 1, progressSteps.length - 1);
-      spinner.text = chalk.cyan(`${progressSteps[progress]}... ${buildType} build`);
-    }, 3000);
 
+    const gradleProcess = spawn(
+      'cmd.exe',
+      ['/d', '/s', '/c', `gradlew.bat ${buildCommand}`],
+      {
+        cwd: join(process.cwd(), 'android'),
+        env,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+      },
+    );
+
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
     let buildOutput = '';
-    let hasError = false;
 
-    gradleProcess.stdout?.on('data', (data) => {
+    let finished = false;
+
+    const finishSuccess = (): void => {
+      if (finished) return;
+
+      finished = true;
+
+      spinner.succeed(
+        chalk.green(
+          `✓ ${capitalize(buildType)} APK built successfully`,
+        ),
+      );
+
+      resolve();
+    };
+
+    const finishFailure = (error: Error): void => {
+      if (finished) return;
+
+      finished = true;
+
+      spinner.fail(
+        chalk.red(`✗ Failed to build ${buildType} APK`),
+      );
+
+      reject(error);
+    };
+
+    const handleOutput = (data: Buffer, isError = false): void => {
       const output = data.toString();
+
       buildOutput += output;
 
-      // Parse Gradle output for task information
-      const taskMatch = output.match(/> Task :([^\n]+)/);
-      if (taskMatch) {
-        const task = taskMatch[1];
-        currentTask = task;
-
-        // Update spinner based on current task
-        if (task.includes('compile')) {
-          spinner.text = chalk.cyan(`📝 Compiling ${task.split(':').pop()}...`);
-        } else if (task.includes('process')) {
-          spinner.text = chalk.cyan(`⚙️  Processing ${task.split(':').pop()}...`);
-        } else if (task.includes('assemble')) {
-          spinner.text = chalk.cyan(`🔨 Assembling ${buildType} APK...`);
-        } else if (task.includes('sign')) {
-          spinner.text = chalk.cyan(`✍️  Signing APK...`);
-        } else if (task.includes('transform')) {
-          spinner.text = chalk.cyan(`🔄 Transforming resources...`);
-        } else {
-          spinner.text = chalk.cyan(`🔧 ${task.split(':').pop()}...`);
-        }
-      }
-
-      // Check for build progress indicators
-      if (output.includes('BUILD SUCCESSFUL')) {
-        clearInterval(progressInterval);
-        spinner.succeed(
-          chalk.green(
-            `✓ ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK built successfully`,
-          ),
-        );
-        resolve();
-      }
-    });
-
-    gradleProcess.stderr?.on('data', (data) => {
-      const error = data.toString();
-      buildOutput += error;
-
-      // Check for specific error patterns
-      if (error.includes('BUILD FAILED') || error.includes('FAILURE')) {
-        hasError = true;
-        clearInterval(progressInterval);
-        spinner.fail(chalk.red(`✗ Failed to build ${buildType} APK`));
-
-        // Show more specific error information
-        if (error.includes('OutOfMemoryError')) {
-          console.log(chalk.yellow('💡 Tip: Try increasing Gradle memory in gradle.properties'));
-        } else if (error.includes('permission denied')) {
-          console.log(chalk.yellow('💡 Tip: Check file permissions or close other applications'));
-        }
-      }
-    });
-
-    gradleProcess.on('close', (code) => {
-      clearInterval(progressInterval);
-
-      if (code === 0 && !hasError) {
-        if (!spinner.isSpinning) return; // Already handled success
-        spinner.succeed(
-          chalk.green(
-            `✓ ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK built successfully`,
-          ),
-        );
-        resolve();
+      if (isError) {
+        stderrBuffer += output;
       } else {
-        if (!hasError) {
-          spinner.fail(chalk.red(`✗ Build failed with exit code ${code}`));
-        }
-        reject(new Error(`Build failed with exit code ${code}`));
+        stdoutBuffer += output;
       }
+
+      const buffer = isError ? stderrBuffer : stdoutBuffer;
+
+      const lines = buffer.split(/\r?\n/);
+
+      if (isError) {
+        stderrBuffer = lines.pop() ?? '';
+      } else {
+        stdoutBuffer = lines.pop() ?? '';
+      }
+
+      for (const line of lines) {
+        handleGradleLine(line);
+      }
+    };
+
+    const handleGradleLine = (line: string): void => {
+      const trimmed = line.trim();
+
+      if (!trimmed) return;
+
+      const taskMatch = trimmed.match(/^> Task :(.+)$/);
+
+      if (taskMatch) {
+        updateSpinner(taskMatch[1]);
+      }
+
+      if (
+        trimmed.includes('BUILD SUCCESSFUL')
+      ) {
+        finishSuccess();
+      }
+    };
+
+    const updateSpinner = (task: string): void => {
+      const taskName = task.split(':').pop() ?? task;
+      const lowerTask = task.toLowerCase();
+
+      if (lowerTask.includes('compile')) {
+        spinner.text = chalk.cyan(
+          `📝 Compiling ${taskName}...`,
+        );
+      } else if (lowerTask.includes('process')) {
+        spinner.text = chalk.cyan(
+          `⚙️ Processing ${taskName}...`,
+        );
+      } else if (lowerTask.includes('assemble')) {
+        spinner.text = chalk.cyan(
+          `🔨 Assembling ${buildType} APK...`,
+        );
+      } else if (lowerTask.includes('sign')) {
+        spinner.text = chalk.cyan(
+          `✍️ Signing APK...`,
+        );
+      } else if (lowerTask.includes('transform')) {
+        spinner.text = chalk.cyan(
+          `🔄 Transforming resources...`,
+        );
+      } else {
+        spinner.text = chalk.cyan(
+          `🔧 ${taskName}...`,
+        );
+      }
+    };
+
+    gradleProcess.stdout?.on('data', (data: Buffer) => {
+      handleOutput(data);
+    });
+
+    gradleProcess.stderr?.on('data', (data: Buffer) => {
+      handleOutput(data, true);
     });
 
     gradleProcess.on('error', (error) => {
-      clearInterval(progressInterval);
-      spinner.fail(chalk.red(`✗ Failed to start build process`));
-      reject(error);
+      finishFailure(error);
+    });
+
+    gradleProcess.on('close', (code) => {
+      if (finished) return;
+
+      if (code === 0) {
+        finishSuccess();
+        return;
+      }
+
+      console.log('\n');
+
+      // Show the actual Gradle output when it fails.
+      console.log(
+        chalk.red('Gradle build output:\n'),
+      );
+
+      console.log(buildOutput);
+
+      finishFailure(
+        new Error(
+          `Gradle build failed with exit code ${code ?? 'unknown'}`,
+        ),
+      );
     });
   });
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 // Enhanced clean function with detailed progress
@@ -353,12 +415,12 @@ function runGradleCleanWithProgress(): Promise<void> {
         console.log(
           boxen(
             chalk.green('🧹 Clean Complete!') +
-              '\n' +
-              chalk.gray('• Build directories cleared') +
-              '\n' +
-              chalk.gray('• Gradle cache refreshed') +
-              '\n' +
-              chalk.gray('• Ready for fresh build'),
+            '\n' +
+            chalk.gray('• Build directories cleared') +
+            '\n' +
+            chalk.gray('• Gradle cache refreshed') +
+            '\n' +
+            chalk.gray('• Ready for fresh build'),
             {
               padding: { top: 0, bottom: 0, left: 1, right: 1 },
               margin: { top: 1, bottom: 1, left: 0, right: 0 },
@@ -421,17 +483,17 @@ async function handleWindowsFileLocks() {
   console.log(
     boxen(
       chalk.yellow('⚠️  Windows File Lock Detected') +
-        '\n' +
-        chalk.gray('To fix this issue:') +
-        '\n' +
-        chalk.white('1. Close VS Code/Android Studio') +
-        '\n' +
-        chalk.white('2. Close Windows Explorer in project folder') +
-        '\n' +
-        chalk.white('3. Run: ') +
-        chalk.cyan('taskkill /f /im java.exe') +
-        '\n' +
-        chalk.white('4. Try the build again'),
+      '\n' +
+      chalk.gray('To fix this issue:') +
+      '\n' +
+      chalk.white('1. Close VS Code/Android Studio') +
+      '\n' +
+      chalk.white('2. Close Windows Explorer in project folder') +
+      '\n' +
+      chalk.white('3. Run: ') +
+      chalk.cyan('taskkill /f /im java.exe') +
+      '\n' +
+      chalk.white('4. Try the build again'),
       {
         padding: { top: 0, bottom: 0, left: 1, right: 1 },
         borderStyle: 'round',
@@ -449,8 +511,8 @@ export async function buildAndroidRelease(
   console.log(
     boxen(
       gradientString('green', 'blue')('📱 React Native Android Build') +
-        '\n' +
-        chalk.gray(`Building ${buildType} APK...`),
+      '\n' +
+      chalk.gray(`Building ${buildType} APK...`),
       {
         padding: { top: 0, bottom: 0, left: 1, right: 1 },
         margin: { top: 1, bottom: 1, left: 0, right: 0 },
@@ -466,8 +528,8 @@ export async function buildAndroidRelease(
     console.log(
       boxen(
         chalk.blue('⚙️ Running Expo Prebuild') +
-          '\n' +
-          chalk.gray('Generating native directories...'),
+        '\n' +
+        chalk.gray('Generating native directories...'),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
           margin: { top: 1, bottom: 1, left: 0, right: 0 },
@@ -492,8 +554,8 @@ export async function buildAndroidRelease(
       console.log(
         boxen(
           chalk.red('💥 Prebuild Failed') +
-            '\n' +
-            chalk.white(error.message || 'Unknown error occurred'),
+          '\n' +
+          chalk.white(error.message || 'Unknown error occurred'),
           {
             padding: { top: 0, bottom: 0, left: 1, right: 1 },
             borderStyle: 'round',
@@ -515,8 +577,8 @@ export async function buildAndroidRelease(
     console.log(
       boxen(
         chalk.red('❌ Error: ') +
-          chalk.white('No Android directory found\n') +
-          chalk.gray("Make sure you're in a React Native project root"),
+        chalk.white('No Android directory found\n') +
+        chalk.gray("Make sure you're in a React Native project root"),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
           borderStyle: 'round',
@@ -535,8 +597,8 @@ export async function buildAndroidRelease(
     console.log(
       boxen(
         chalk.red('❌ Error: ') +
-          chalk.white('gradlew.bat not found in android directory\n') +
-          chalk.gray('Make sure your React Native project is properly set up'),
+        chalk.white('gradlew.bat not found in android directory\n') +
+        chalk.gray('Make sure your React Native project is properly set up'),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
           borderStyle: 'round',
@@ -554,8 +616,8 @@ export async function buildAndroidRelease(
       console.log(
         boxen(
           chalk.yellow('🧹 Clean Process Starting') +
-            '\n' +
-            chalk.gray('Removing previous build artifacts...'),
+          '\n' +
+          chalk.gray('Removing previous build artifacts...'),
           {
             padding: { top: 0, bottom: 0, left: 1, right: 1 },
             margin: { top: 1, bottom: 1, left: 0, right: 0 },
@@ -587,10 +649,10 @@ export async function buildAndroidRelease(
     console.log(
       boxen(
         chalk.blue('🔨 Build Process Starting') +
-          '\n' +
-          chalk.gray(`Target: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK`) +
-          '\n' +
-          chalk.gray('This may take a few minutes...'),
+        '\n' +
+        chalk.gray(`Target: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)} APK`) +
+        '\n' +
+        chalk.gray('This may take a few minutes...'),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
           margin: { top: 1, bottom: 1, left: 0, right: 0 },
@@ -613,14 +675,14 @@ export async function buildAndroidRelease(
     console.log(
       boxen(
         chalk.green('🎉 Build Complete!') +
-          '\n' +
-          chalk.gray(`Build Type: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)}`) +
-          '\n' +
-          chalk.gray(`Completed: ${buildTime}`) +
-          '\n' +
-          chalk.gray(
-            `Original APK: android/app/build/outputs/apk/${buildType}/app-${buildType}.apk`,
-          ),
+        '\n' +
+        chalk.gray(`Build Type: ${buildType.charAt(0).toUpperCase() + buildType.slice(1)}`) +
+        '\n' +
+        chalk.gray(`Completed: ${buildTime}`) +
+        '\n' +
+        chalk.gray(
+          `Original APK: android/app/build/outputs/apk/${buildType}/app-${buildType}.apk`,
+        ),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
           margin: { top: 1, bottom: 0, left: 0, right: 0 },
@@ -652,12 +714,12 @@ export async function buildAndroidRelease(
         console.log(
           boxen(
             chalk.blue('📦 APK Organized!') +
-              '\n' +
-              chalk.gray('Organized to:') +
-              '\n' +
-              chalk.cyan(copiedApkPath.replace(process.cwd(), '.')) +
-              '\n' +
-              chalk.gray(`Size: ${fileSizeInMB} MB`),
+            '\n' +
+            chalk.gray('Organized to:') +
+            '\n' +
+            chalk.cyan(copiedApkPath.replace(process.cwd(), '.')) +
+            '\n' +
+            chalk.gray(`Size: ${fileSizeInMB} MB`),
             {
               padding: { top: 0, bottom: 0, left: 1, right: 1 },
               margin: { top: 1, bottom: 0, left: 0, right: 0 },
@@ -671,10 +733,10 @@ export async function buildAndroidRelease(
         console.log(
           boxen(
             chalk.blue('📦 APK Organized!') +
-              '\n' +
-              chalk.gray('Organized to:') +
-              '\n' +
-              chalk.cyan(copiedApkPath.replace(process.cwd(), '.')),
+            '\n' +
+            chalk.gray('Organized to:') +
+            '\n' +
+            chalk.cyan(copiedApkPath.replace(process.cwd(), '.')),
             {
               padding: { top: 0, bottom: 0, left: 1, right: 1 },
               margin: { top: 1, bottom: 0, left: 0, right: 0 },
@@ -692,8 +754,8 @@ export async function buildAndroidRelease(
     console.log(
       boxen(
         chalk.red('💥 Build Failed') +
-          '\n' +
-          chalk.white(error.message || 'Unknown error occurred'),
+        '\n' +
+        chalk.white(error.message || 'Unknown error occurred'),
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
           borderStyle: 'round',
