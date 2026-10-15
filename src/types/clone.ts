@@ -1,13 +1,13 @@
 export type osTypes =
-  | "aix"
-  | "android"
-  | "darwin" 
-  | "freebsd"
-  | "linux"
-  | "openbsd"
-  | "sunos"
-  | "win32" 
-  | "cygwin";
+  | 'aix'
+  | 'android'
+  | 'darwin'
+  | 'freebsd'
+  | 'linux'
+  | 'openbsd'
+  | 'sunos'
+  | 'win32'
+  | 'cygwin';
 
 export interface Clone {
   os: osTypes;

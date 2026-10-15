@@ -278,8 +278,9 @@ export async function workspace() {
   const workspaceChoices = config.workspaces.map((ws, index) => {
     const colorFn = (chalk as any)[ws.color || 'cyan'] || chalk.cyan;
     return {
-      name: `${index + 1}. ${colorFn(ws.name)}${ws.description ? chalk.gray(` - ${ws.description}`) : ''
-        }`,
+      name: `${index + 1}. ${colorFn(ws.name)}${
+        ws.description ? chalk.gray(` - ${ws.description}`) : ''
+      }`,
       value: ws.name,
       short: ws.name,
     };

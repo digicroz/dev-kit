@@ -75,8 +75,7 @@ export function detectProjectType(rootDir: string = process.cwd()): DKProjectTyp
     if (deps['vite'] && deps['react']) return 'vite-react';
     if (deps['react-native']) return 'react-native-cli';
     if (deps['tsup']) return 'npm-package';
-
-  } catch { }
+  } catch {}
   return null;
 }
 

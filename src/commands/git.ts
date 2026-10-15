@@ -453,7 +453,7 @@ const resolvePathPatterns = (patterns: string[]): string[] => {
           resolved.push(`./${candidatePath}`);
         }
       }
-    } catch { }
+    } catch {}
   }
 
   return resolved;
@@ -490,9 +490,7 @@ const ensureS2CIgnoreEntry = (s2cDir: string): { changed: boolean; pattern: stri
   if (!content) {
     updatedLines = [marker, pattern, ''];
   } else if (hasMarker) {
-    const markerIndex = updatedLines
-      .map((line) => line.trim())
-      .lastIndexOf(marker);
+    const markerIndex = updatedLines.map((line) => line.trim()).lastIndexOf(marker);
     updatedLines.splice(markerIndex + 1, 0, pattern);
     if (updatedLines[updatedLines.length - 1].trim() !== '') {
       updatedLines.push('');
@@ -655,7 +653,6 @@ export const gitAutoCommit = async () => {
       candidatePaths = ['src/*/_prisma', './prisma', './src/_s2s', './b2fPortal', './_s2c'];
       commitMessage = '_prisma and s2s changes';
       break;
-
 
     case 'npm-package':
       ui.info('Project type', 'npm-package');

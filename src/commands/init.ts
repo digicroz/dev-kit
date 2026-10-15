@@ -45,7 +45,7 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
     try {
       const settingsContent = await fs.readFile(settingsPath, 'utf8');
       settings = JSON.parse(settingsContent);
-    } catch (error) { }
+    } catch (error) {}
   }
 
   if (!settings['files.readonlyInclude']) {
