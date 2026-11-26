@@ -68,14 +68,14 @@ jobs:
            ".env.dev"
            ".gitattributes"
            ".gitignore"
-           ".prettierignore"
-           ".prettierrc.json"
+           ".oxfmtrc.json"
+           ".oxlintrc.json"
            "dk.config.json"
-           "eslint.config.js"
            "nsk.config.json"
            "package-lock.json"
            "package.json"
            "tsconfig.json"
+           "tsdown.config.ts"
           )
           # Get the base commit SHA
           BASE_SHA=$(git merge-base origin/main HEAD)
@@ -112,10 +112,10 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Lint Project
+      - name: Check formatting (oxfmt)
         run: npm run format:check
 
-      - name: Lint Project
+      - name: Lint (oxlint)
         run: npm run lint:check
 
       - name: Compile TypeScript
