@@ -1,8 +1,9 @@
 // Workspace configuration management
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { CloneConfig } from '../types/clone';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
+import { join, dirname } from 'node:path';
+
+import type { CloneConfig } from '../types/clone';
 export function getCloneConfigPath(): string {
   const home = os.homedir();
   const configDir = join(home, '.digicroz', 'dk');
@@ -11,7 +12,9 @@ export function getCloneConfigPath(): string {
 export function writeCloneConfig(config: CloneConfig): void {
   const configPath = getCloneConfigPath();
   const dir = dirname(configPath);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
   writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 }
 export function readCloneConfig(): CloneConfig | null {
@@ -23,7 +26,10 @@ export function readCloneConfig(): CloneConfig | null {
     const content = readFileSync(configPath, 'utf-8');
     return JSON.parse(content) as CloneConfig;
   } catch (error) {
-    throw new Error(`Failed to read 
-       clone config: ${error}`);
+    throw new Error(
+      `Failed to read 
+       clone config: ${String(error)}`,
+      { cause: error },
+    );
   }
 }

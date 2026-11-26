@@ -1,15 +1,16 @@
-import { ui } from '../utils/ui-helpers.js';
-import { readConfig } from '../utils/config.js';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { existsSync } from 'fs';
+import { promises as fs, existsSync } from 'node:fs';
+import path from 'node:path';
+
 import sizeOf from 'image-size';
+
+import { readConfig } from '../utils/config.js';
+import { ui } from '../utils/ui-helpers.js';
 
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg', '.avif']);
 
 function toCamel(str: string): string {
   return str
-    .replace(/[_\s\-\.]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
+    .replace(/[_\s.-]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
     .replace(/^[A-Z]/, (m) => m.toLowerCase())
     .replace(/[^a-zA-Z0-9]/g, '');
 }
@@ -17,9 +18,9 @@ function toCamel(str: string): string {
 function toKebabCase(str: string): string {
   return str
     .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .replace(/[\s_\.]+/g, '-')
+    .replace(/[\s_.]+/g, '-')
     .toLowerCase()
-    .replace(/[^a-z0-9\-]/g, '')
+    .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }
@@ -27,7 +28,7 @@ function toKebabCase(str: string): string {
 function toSnakeCase(str: string): string {
   return str
     .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/[\s\-\.]+/g, '_')
+    .replace(/[\s.-]+/g, '_')
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, '')
     .replace(/_+/g, '_')
@@ -59,7 +60,9 @@ function toValidIdentifier(str: string): string {
 function ensureUnique(name: string, used: Set<string>): string {
   let n = name;
   let i = 2;
-  while (used.has(n)) n = `${name}${i++}`;
+  while (used.has(n)) {
+    n = `${name}${i++}`;
+  }
   used.add(n);
   return n;
 }
@@ -85,7 +88,9 @@ function setInTree(tree: any, pathParts: string[], leafValue: string): void {
   let node = tree;
   for (let i = 0; i < pathParts.length - 1; i++) {
     const part = pathParts[i];
-    if (!node[part]) node[part] = {};
+    if (!node[part]) {
+      node[part] = {};
+    }
     node = node[part];
   }
   node[pathParts[pathParts.length - 1]] = leafValue;
@@ -355,8 +360,7 @@ export const generateImageIndex = async (): Promise<void> => {
       body = `export const ImageAssets = ${objectToTS(sortedTree)};\n`;
     } else {
       const allImports = [...typeImports, ...imports.sort()].join('\n');
-      body =
-        `${allImports}\n\n` + `export const ImageAssets = ${objectToTS(sortedTree)} as const;\n`;
+      body = `${allImports}\n\nexport const ImageAssets = ${objectToTS(sortedTree)} as const;\n`;
     }
 
     await fs.writeFile(outputFile, header + body, 'utf8');

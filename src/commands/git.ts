@@ -1,11 +1,13 @@
-import { ui } from '../utils/ui-helpers.js';
-import { spawn } from 'child_process';
-import inquirer from 'inquirer';
+import { spawn } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import chalk from 'chalk';
-import { readConfig } from '../utils/config.js';
+import inquirer from 'inquirer';
+
 import { DKProjectType } from '../types/config.js';
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { readConfig } from '../utils/config.js';
+import { ui } from '../utils/ui-helpers.js';
 
 type GitConfigScope = 'local' | 'global' | 'both';
 
@@ -282,11 +284,11 @@ export const gitFix = async () => {
   }
 
   // Ask user what to fix
-  const choices: Array<{
+  const choices: {
     name: string;
     value: GitConfigScope;
     checked?: boolean;
-  }> = [];
+  }[] = [];
 
   if (needsGlobalFix) {
     choices.push({
@@ -354,7 +356,9 @@ export const gitFix = async () => {
   const failed: string[] = [];
 
   for (const scope of scopesToFix) {
-    if (scope === 'both') continue; // This is handled by having both global and local in the array
+    if (scope === 'both') {
+      continue;
+    } // This is handled by having both global and local in the array
 
     if (scope === 'local' && !isGitRepo) {
       failed.push(`${scope} (not in git repository)`);
@@ -441,19 +445,25 @@ const resolvePathPatterns = (patterns: string[]): string[] => {
     const suffix = segments.slice(wildcardIndex + 1).join('/');
     const baseFullPath = resolve(process.cwd(), basePath);
 
-    if (!existsSync(baseFullPath)) continue;
+    if (!existsSync(baseFullPath)) {
+      continue;
+    }
 
     try {
       const entries = readdirSync(baseFullPath, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
         const candidatePath = [basePath, entry.name, suffix].filter(Boolean).join('/');
         const fullPath = resolve(process.cwd(), candidatePath);
         if (existsSync(fullPath)) {
           resolved.push(`./${candidatePath}`);
         }
       }
-    } catch {}
+    } catch {
+      /* best-effort: ignore */
+    }
   }
 
   return resolved;
@@ -633,8 +643,8 @@ export const gitAutoCommit = async () => {
   }
 
   // Project-type specific commit logic
-  let candidatePaths: string[] = [];
-  let commitMessage = '';
+  let candidatePaths: string[];
+  let commitMessage: string;
 
   switch (projectType) {
     case 'node-express':

@@ -1,7 +1,8 @@
 // Workspace configuration management
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
-import { join, dirname, basename } from 'path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, dirname, basename } from 'node:path';
+
 import type { WorkspaceConfig, WorkspaceModule } from '../types/workspace.js';
 import { readCloneConfig } from './clone-config.js';
 
@@ -56,7 +57,7 @@ export function readWorkspaceConfig(): WorkspaceConfig {
     const content = readFileSync(configPath, 'utf-8');
     return JSON.parse(content) as WorkspaceConfig;
   } catch (error) {
-    throw new Error(`Failed to read workspace config: ${error}`);
+    throw new Error(`Failed to read workspace config: ${String(error)}`, { cause: error });
   }
 }
 
@@ -73,7 +74,7 @@ export function writeWorkspaceConfig(config: WorkspaceConfig): void {
   try {
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
   } catch (error) {
-    throw new Error(`Failed to write workspace config: ${error}`);
+    throw new Error(`Failed to write workspace config: ${String(error)}`, { cause: error });
   }
 }
 
@@ -124,18 +125,18 @@ export function importWorkspaceConfig(filePath: string): WorkspaceConfig {
 
     return config;
   } catch (error) {
-    throw new Error(`Failed to import workspace config: ${error}`);
+    throw new Error(`Failed to import workspace config: ${String(error)}`, { cause: error });
   }
 }
 
 // ---- ws.dk.json: per-repo module descriptor, discovered by `dk ws scan` ----
 export const REPO_CONFIG_FILE = 'ws.dk.json';
 
-export interface ScannedModule {
+export type ScannedModule = {
   workspace: string;
   module: WorkspaceModule;
   order?: number;
-}
+};
 
 // Look for ws.dk.json in dir and up to `depth` levels below it.
 // ponytail: plain recursive readdir; fine for a projects folder, slow if pointed at a drive root.
@@ -144,7 +145,9 @@ export function scanForRepoConfigs(dir: string, depth = 2): ScannedModule[] {
   const file = join(dir, REPO_CONFIG_FILE);
   if (existsSync(file)) {
     const c = JSON.parse(readFileSync(file, 'utf-8'));
-    if (!c.workspace) throw new Error(`${file}: "workspace" is required`);
+    if (!c.workspace) {
+      throw new Error(`${file}: "workspace" is required`);
+    }
     found.push({
       workspace: c.workspace,
       order: typeof c.order === 'number' ? c.order : undefined,
@@ -171,33 +174,48 @@ export function scanForRepoConfigs(dir: string, depth = 2): ScannedModule[] {
 export function mergeScanned(config: WorkspaceConfig, found: ScannedModule[]): void {
   for (const { workspace, module, order } of found) {
     let ws = config.workspaces.find((w) => w.name === workspace);
-    if (!ws) config.workspaces.push((ws = { name: workspace, modules: [] }));
-    if (order !== undefined) ws.order = order; // ponytail: last scanned module wins if several set it
+    if (!ws) {
+      config.workspaces.push((ws = { name: workspace, modules: [] }));
+    }
+    if (order !== undefined) {
+      ws.order = order;
+    } // ponytail: last scanned module wins if several set it
     const i = ws.modules.findIndex((m) => m.path === module.path);
-    if (i >= 0) ws.modules[i] = module;
-    else ws.modules.push(module);
+    if (i >= 0) {
+      ws.modules[i] = module;
+    } else {
+      ws.modules.push(module);
+    }
   }
 }
 
 // Repos folder that `dk clone` uses: <clone baseDir>/digicroz-repos. null if clone was never set up.
 export function getReposRoot(): string | null {
   const base = readCloneConfig()?.clones[0]?.baseDir;
-  if (!base) return null;
+  if (!base) {
+    return null;
+  }
   // "C:" alone is drive-relative in node's path.join, so force the root slash.
-  return join(/^[A-Za-z]:$/.test(base) ? base + '/' : base, 'digicroz-repos');
+  return join(/^[A-Za-z]:$/.test(base) ? `${base}/` : base, 'digicroz-repos');
 }
 
 // Make sure scanDirs exists (default: repos root) and sits right after version, before workspaces.
 // Also re-orders configs that were already backfilled with scanDirs at the end.
 export function backfillScanDirs(): void {
-  if (!workspaceConfigExists()) return;
+  if (!workspaceConfigExists()) {
+    return;
+  }
   const config = readWorkspaceConfig();
   const root = getReposRoot();
   const scanDirs = config.scanDirs ?? (root ? [root] : undefined);
-  if (!scanDirs) return;
+  if (!scanDirs) {
+    return;
+  }
   const { version, scanDirs: _old, ...rest } = config;
   const ordered = { version, scanDirs, ...rest };
-  if (JSON.stringify(ordered) !== JSON.stringify(config)) writeWorkspaceConfig(ordered);
+  if (JSON.stringify(ordered) !== JSON.stringify(config)) {
+    writeWorkspaceConfig(ordered);
+  }
 }
 
 // Config used by `dk ws`: saved config + modules found via ws.dk.json under the repos root.
@@ -205,10 +223,12 @@ export function backfillScanDirs(): void {
 export function loadWorkspaceConfig(): { config: WorkspaceConfig; warning?: string } {
   const config = workspaceConfigExists() ? readWorkspaceConfig() : createDefaultConfig();
   // Configs made before scanDirs existed fall back to the repos root.
-  const dirs = config.scanDirs ?? [getReposRoot()].filter((d): d is string => !!d);
+  const dirs = config.scanDirs ?? [getReposRoot()].filter((d): d is string => Boolean(d));
   const warnings: string[] = [];
   for (const dir of dirs) {
-    if (!existsSync(dir)) continue;
+    if (!existsSync(dir)) {
+      continue;
+    }
     try {
       mergeScanned(config, scanForRepoConfigs(dir));
     } catch (e) {

@@ -1,8 +1,9 @@
 // Run: npx tsx src/utils/workspace-scan.check.ts
-import assert from 'assert';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import assert from 'node:assert';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import type { Workspace } from '../types/workspace.js';
 import { scanForRepoConfigs, mergeScanned } from './workspace-config.js';
 

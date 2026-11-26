@@ -1,13 +1,14 @@
-import { exec, execSync } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import inquirer from 'inquirer';
+import { exec, execSync } from 'node:child_process';
+import fs, { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
-import path, { dirname, join } from 'path';
-import { promisify } from 'util';
-import { CloneConfig, osTypes } from '../types/clone';
+import path, { dirname, join } from 'node:path';
+import { promisify } from 'node:util';
+
+import inquirer from 'inquirer';
+
+import type { CloneConfig, osTypes } from '../types/clone';
 import { getCloneConfigPath, readCloneConfig, writeCloneConfig } from '../utils/clone-config';
 import { ui } from '../utils/ui-helpers';
-import fs from 'fs';
 const execAsync = promisify(exec);
 
 function getRootDrives(): Promise<string[]> {
@@ -15,7 +16,9 @@ function getRootDrives(): Promise<string[]> {
     exec(
       'powershell -Command "Get-PSDrive -PSProvider FileSystem | ForEach-Object { $_.Name }"',
       (err, stdout) => {
-        if (err) return reject(err);
+        if (err) {
+          return reject(err);
+        }
 
         const drives = stdout
           .split('\n')
@@ -30,7 +33,9 @@ function getRootDrives(): Promise<string[]> {
 // Pick (once) the drive/folder that holds 'digicroz-repos'. Called by `dk ws init`.
 export async function ensureCloneBaseDir(): Promise<string> {
   const config = readCloneConfig();
-  if (config && config.clones.length > 0) return config.clones[0].baseDir;
+  if (config && config.clones.length > 0) {
+    return config.clones[0].baseDir;
+  }
   let baseDir: string;
   const osType = os.platform() as osTypes;
   if (osType === 'win32') {

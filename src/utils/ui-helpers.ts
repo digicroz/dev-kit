@@ -1,10 +1,11 @@
-import chalk from 'chalk';
+import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import boxen from 'boxen';
+import chalk from 'chalk';
 import * as gradientString from 'gradient-string';
-import ora, { Ora } from 'ora';
-import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import path from 'path';
+import ora, { type Ora } from 'ora';
 
 /**
  * Enhanced UI helpers with beautiful styling
@@ -14,7 +15,9 @@ export class UIHelper {
   private static instance: UIHelper;
   private activeSpinners: Set<Ora> = new Set();
 
-  private constructor() {}
+  private constructor() {
+    /* singleton: use getInstance() */
+  }
 
   public static getInstance(): UIHelper {
     if (!UIHelper.instance) {
@@ -29,7 +32,7 @@ export class UIHelper {
   public success(message: string, details?: string): void {
     console.log(chalk.green('✓'), chalk.bold(message));
     if (details) {
-      console.log(chalk.gray('  ' + details));
+      console.log(chalk.gray(`  ${details}`));
     }
   }
 
@@ -39,7 +42,7 @@ export class UIHelper {
   public error(message: string, details?: string): void {
     console.log(chalk.red('✗'), chalk.bold.red(message));
     if (details) {
-      console.log(chalk.red('  ' + details));
+      console.log(chalk.red(`  ${details}`));
     }
   }
 
@@ -49,7 +52,7 @@ export class UIHelper {
   public info(message: string, details?: string): void {
     console.log(chalk.blue('ℹ'), chalk.bold.blue(message));
     if (details) {
-      console.log(chalk.gray('  ' + details));
+      console.log(chalk.gray(`  ${details}`));
     }
   }
 
@@ -59,14 +62,14 @@ export class UIHelper {
   public warning(message: string, details?: string): void {
     console.log(chalk.yellow('⚠'), chalk.bold.yellow(message));
     if (details) {
-      console.log(chalk.yellow('  ' + details));
+      console.log(chalk.yellow(`  ${details}`));
     }
   }
 
   /**
    * Create a beautiful progress spinner
    */
-  public createSpinner(text: string, spinnerType: string = 'dots12'): Ora {
+  public createSpinner(text: string, spinnerType = 'dots12'): Ora {
     const spinner = ora({
       text: chalk.cyan(text),
       spinner: spinnerType as any,
@@ -82,7 +85,7 @@ export class UIHelper {
    */
   public section(title: string, subtitle?: string): void {
     console.log('\n');
-    const content = chalk.bold.white(title) + (subtitle ? '\n' + chalk.gray(subtitle) : '');
+    const content = chalk.bold.white(title) + (subtitle ? `\n${chalk.gray(subtitle)}` : '');
     console.log(
       boxen(content, {
         padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -104,24 +107,24 @@ export class UIHelper {
   /**
    * Create a progress bar visualization
    */
-  public progressBar(current: number, total: number, width: number = 20): string {
+  public progressBar(current: number, total: number, width = 20): string {
     const percentage = Math.round((current / total) * 100);
     const completed = Math.round((width * current) / total);
     const remaining = width - completed;
 
     const bar = chalk.green('█'.repeat(completed)) + chalk.gray('░'.repeat(remaining));
-    return `${bar} ${chalk.cyan(percentage + '%')} (${current}/${total})`;
+    return `${bar} ${chalk.cyan(`${percentage}%`)} (${current}/${total})`;
   }
 
   /**
    * Create a beautiful table-like output
    */
-  public table(data: Array<{ key: string; value: string }>): void {
+  public table(data: { key: string; value: string }[]): void {
     const maxKeyLength = Math.max(...data.map((item) => item.key.length));
 
     data.forEach((item) => {
       const padding = ' '.repeat(maxKeyLength - item.key.length + 2);
-      console.log(chalk.cyan(item.key) + chalk.gray(padding + '→') + chalk.white(' ' + item.value));
+      console.log(chalk.cyan(item.key) + chalk.gray(`${padding}→`) + chalk.white(` ${item.value}`));
     });
   }
 
@@ -184,7 +187,7 @@ export class UIHelper {
     };
 
     console.log(
-      boxen(colorMap[type](icons[type] + ' ') + chalk.bold.white(message), {
+      boxen(colorMap[type](`${icons[type]} `) + chalk.bold.white(message), {
         padding: 1,
         margin: { top: 1, bottom: 1, left: 0, right: 0 },
         borderStyle: 'round',
@@ -230,9 +233,13 @@ export class UIHelper {
     if (existsSync(packageJsonPath)) {
       try {
         const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-        if (tool === 'eslint' && packageJson.eslintConfig) return true;
-        if (tool === 'prettier' && packageJson.prettier) return true;
-      } catch (error) {
+        if (tool === 'eslint' && packageJson.eslintConfig) {
+          return true;
+        }
+        if (tool === 'prettier' && packageJson.prettier) {
+          return true;
+        }
+      } catch {
         // Ignore JSON parse errors
       }
     }
@@ -284,7 +291,7 @@ export class UIHelper {
             cwd: projectRoot,
           });
           this.info('Prettier formatting applied');
-        } catch (error) {
+        } catch {
           this.warning('Prettier encountered issues but file was processed');
         }
       }
@@ -293,8 +300,12 @@ export class UIHelper {
 
       if (hasEslint || hasPrettier) {
         const tools = [];
-        if (hasEslint) tools.push('ESLint');
-        if (hasPrettier) tools.push('Prettier');
+        if (hasEslint) {
+          tools.push('ESLint');
+        }
+        if (hasPrettier) {
+          tools.push('Prettier');
+        }
         this.success(
           'Code formatting completed',
           `Applied ${tools.join(' and ')} to generated file`,
@@ -312,18 +323,3 @@ export class UIHelper {
 
 // Export singleton instance
 export const ui = UIHelper.getInstance();
-
-// Export individual functions for convenience
-export const {
-  success,
-  error,
-  info,
-  warning,
-  section,
-  gradientText,
-  progressBar,
-  table,
-  banner,
-  confirmBox,
-  formatGeneratedFile,
-} = ui;

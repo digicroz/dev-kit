@@ -3,24 +3,43 @@
   "version": "1.0.11",
   "description": "A comprehensive CLI toolkit for modern development workflows - featuring task automation, project cleaning, and developer utilities",
   "keywords": [
-    "cli",
-    "toolkit",
-    "development",
-    "workflow",
     "automation",
-    "typescript",
-    "developer-tools",
     "build-tools",
-    "task-runner",
-    "project-management",
+    "cli",
+    "cli-tools",
     "dev-kit",
+    "developer-tools",
+    "development",
     "modern-dev",
-    "cli-tools"
+    "project-management",
+    "task-runner",
+    "toolkit",
+    "typescript",
+    "workflow"
   ],
+  "homepage": "https://github.com/digicroz/dev-kit#readme",
+  "bugs": {
+    "url": "https://github.com/digicroz/dev-kit/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "digicroz",
+    "url": "https://github.com/digicroz"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digicroz/dev-kit.git"
+  },
   "bin": {
     "dk": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "src",
+    "bin"
+  ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -36,28 +55,6 @@
       "import": "./dist/cli.js"
     }
   },
-  "files": [
-    "dist",
-    "src",
-    "bin"
-  ],
-  "sideEffects": false,
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/digicroz/dev-kit.git"
-  },
-  "homepage": "https://github.com/digicroz/dev-kit#readme",
-  "bugs": {
-    "url": "https://github.com/digicroz/dev-kit/issues"
-  },
-  "author": {
-    "name": "digicroz",
-    "url": "https://github.com/digicroz"
-  },
-  "license": "MIT",
-  "engines": {
-    "node": ">=16.0.0"
-  },
   "publishConfig": {
     "access": "public"
   },
@@ -72,21 +69,14 @@
     "deploy:prod": "dk deploy prod",
     "link": "npm run build && npm link",
     "unlink": "npm unlink -g @digicroz/dev-kit",
-    "lint": "eslint . --fix",
-    "lint:check": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "prepare": "husky",
-    "typecheck": "tsc --noEmit"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint --max-warnings 216",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "check": "npm run lint:check && npm run format:check && npm run typecheck",
+    "fix": "npm run lint && npm run format"
   },
   "dependencies": {
     "@digicroz/js-kit": "^1.0.14",
@@ -115,13 +105,25 @@
     "@types/node": "^24.0.10",
     "@types/pg": "^8.11.10",
     "@types/sqlite3": "^3.1.11",
-    "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
-    "prettier": "^3.8.3",
+    "oxfmt": "^0.79.0",
+    "oxlint": "^1.94.0",
+    "oxlint-tsgolint": "^7.0.2007",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.4.0",
-    "typescript-eslint": "^8.59.3"
+    "typescript": "^5.4.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "oxlint --fix",
+      "oxfmt --no-error-on-unmatched-pattern"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "oxfmt --no-error-on-unmatched-pattern"
+    ]
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }

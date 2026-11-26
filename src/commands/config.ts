@@ -1,5 +1,5 @@
-import { ui } from '../utils/ui-helpers';
 import { readConfig, writeConfig, isConfigOutdated } from '../utils/config';
+import { ui } from '../utils/ui-helpers';
 
 export async function updateConfig() {
   const config = readConfig();

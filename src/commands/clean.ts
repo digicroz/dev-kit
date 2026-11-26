@@ -1,12 +1,13 @@
+import { spawn } from 'node:child_process';
+import { promises as fs, existsSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
+
+import fg from 'fast-glob';
+import inquirer from 'inquirer';
+import minimist from 'minimist';
+
 // clean.ts
 import { ui } from '../utils/ui-helpers.js';
-import { promises as fs } from 'fs';
-import { join, resolve, sep } from 'path';
-import inquirer from 'inquirer';
-import { existsSync } from 'fs';
-import { spawn } from 'child_process';
-import fg from 'fast-glob';
-import minimist from 'minimist';
 
 type CleanItem = { pattern: string; type: 'directory' | 'files' };
 
@@ -24,7 +25,8 @@ const readPkg = async () => {
 
 const isReactNative = async () => {
   const pkg = await readPkg();
-  const hasRNDep = !!pkg.dependencies?.['react-native'] || !!pkg.devDependencies?.['react-native'];
+  const hasRNDep =
+    Boolean(pkg.dependencies?.['react-native']) || Boolean(pkg.devDependencies?.['react-native']);
   return existsSync('android') && (existsSync('app.json') || hasRNDep);
 };
 
@@ -59,7 +61,7 @@ const expand = async (items: CleanItem[], dryRun: boolean) => {
   // Expand patterns; for directories, ensure trailing slash is respected
   const entries = await Promise.all(
     items.map(async (it) => {
-      const matches = await fg(it.type === 'directory' ? `${it.pattern}` : it.pattern, {
+      const matches = await fg(it.type === 'directory' ? it.pattern : it.pattern, {
         dot: true,
         onlyFiles: it.type === 'files',
         onlyDirectories: it.type === 'directory',
@@ -73,7 +75,9 @@ const expand = async (items: CleanItem[], dryRun: boolean) => {
   );
   // Flatten
   const flat = entries.flat();
-  if (dryRun) return flat;
+  if (dryRun) {
+    return flat;
+  }
   return flat;
 };
 
@@ -92,7 +96,9 @@ const rmPath = async (p: string, isDir: boolean) => {
 };
 
 const clearDirectoryContents = async (directory: string, dryRun: boolean) => {
-  if (dryRun) return { ok: true, files: 0, dirs: 0 };
+  if (dryRun) {
+    return { ok: true, files: 0, dirs: 0 };
+  }
 
   const entries = await fs.readdir(directory, { withFileTypes: true });
   let files = 0;
@@ -102,8 +108,11 @@ const clearDirectoryContents = async (directory: string, dryRun: boolean) => {
     const path = join(directory, entry.name);
     const res = await rmPath(path, entry.isDirectory());
     if (res.ok) {
-      if (entry.isDirectory()) dirs++;
-      else files++;
+      if (entry.isDirectory()) {
+        dirs++;
+      } else {
+        files++;
+      }
     }
   }
 
@@ -148,8 +157,8 @@ export const clean = async () => {
   });
 
   const args = process.argv.slice(2).map((a) => a.toLowerCase());
-  const dryRun = !!argv['dry-run'];
-  const autoYes = !!argv.yes;
+  const dryRun = Boolean(argv['dry-run']);
+  const autoYes = Boolean(argv.yes);
   const nmOnly = args.includes('nm') || args.includes('node_modules');
   const s2cOnly = args.includes('s2c');
   const s2sOnly = args.includes('s2s');
@@ -171,7 +180,9 @@ export const clean = async () => {
     );
     spinner.start();
     try {
-      if (!dryRun) await fs.rm('node_modules', { recursive: true, force: true });
+      if (!dryRun) {
+        await fs.rm('node_modules', { recursive: true, force: true });
+      }
       spinner.stop();
       ui.success(
         dryRun ? 'Dry-run: node_modules would be deleted.' : 'node_modules deleted successfully!',
@@ -192,7 +203,7 @@ export const clean = async () => {
 
   const rnDetected = await isReactNative();
   let cleanMode: 'all' | 'node' | 'rn-android' | 'rn-ios' =
-    (argv.mode as any) || (rnDetected ? 'all' : 'node');
+    argv.mode || (rnDetected ? 'all' : 'node');
 
   if (rnDetected && !argv.mode && !autoYes) {
     const { mode } = await inquirer.prompt({
@@ -212,10 +223,15 @@ export const clean = async () => {
 
   // Compose items based on mode
   let items: CleanItem[] = [];
-  if (cleanMode === 'all') items = [...nodeDefaults, ...rnAndroidDefaults, ...rnIosDefaults];
-  else if (cleanMode === 'node') items = nodeDefaults;
-  else if (cleanMode === 'rn-android') items = rnAndroidDefaults;
-  else if (cleanMode === 'rn-ios') items = rnIosDefaults;
+  if (cleanMode === 'all') {
+    items = [...nodeDefaults, ...rnAndroidDefaults, ...rnIosDefaults];
+  } else if (cleanMode === 'node') {
+    items = nodeDefaults;
+  } else if (cleanMode === 'rn-android') {
+    items = rnAndroidDefaults;
+  } else if (cleanMode === 'rn-ios') {
+    items = rnIosDefaults;
+  }
 
   // Expand to concrete paths
   const spinner = ui.createSpinner('Scanning for files to clean...');
@@ -281,11 +297,16 @@ export const clean = async () => {
 
   for (const entry of toDelete) {
     cleanSpinner.text = `${dryRun ? 'Would clean' : 'Cleaning'} ${entry.path}...`;
-    if (dryRun) continue;
+    if (dryRun) {
+      continue;
+    }
     const res = await rmPath(entry.path, entry.isDir);
     if (res.ok) {
-      if (entry.isDir) dirs++;
-      else files++;
+      if (entry.isDir) {
+        dirs++;
+      } else {
+        files++;
+      }
       bytes += res.bytes || 0;
     }
   }

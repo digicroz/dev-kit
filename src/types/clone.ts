@@ -9,12 +9,12 @@ export type osTypes =
   | 'win32'
   | 'cygwin';
 
-export interface Clone {
+export type Clone = {
   os: osTypes;
   baseDir: string;
-}
+};
 
-export interface CloneConfig {
+export type CloneConfig = {
   version: string;
   clones: Clone[];
-}
+};

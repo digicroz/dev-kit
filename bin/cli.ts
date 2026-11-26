@@ -1,24 +1,21 @@
-import { Command } from 'commander';
-import chalk from 'chalk';
-import inquirer from 'inquirer';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import boxen from 'boxen';
+import chalk from 'chalk';
+import { Command } from 'commander';
 import gradientString from 'gradient-string';
+import inquirer from 'inquirer';
 import ora from 'ora';
 
 import { clean } from '../src/commands/clean.js';
-import { deployUat, deployProd, releaseNpmPackage } from '../src/commands/deploy.js';
-import { doctor } from '../src/commands/doctor.js';
-import { buildAndroidRelease, buildAndroidDebug } from '../src/commands/reactNative.js';
-import { dev } from '../src/commands/dev.js';
-import { ui } from '../src/utils/ui-helpers.js';
-import { configExists, readConfig, isConfigOutdated } from '../src/utils/config.js';
-import { checkDailyUpdate, getUpdateCommandSuggestion } from '../src/utils/version-check.js';
-import { init as runInit } from '../src/commands/init.js';
+import { clearCloneConfig, clone } from '../src/commands/clone.js';
 import { updateConfig } from '../src/commands/config.js';
-import { startSpringBootServices, buildSpringBootServices } from '../src/commands/springBoot.js';
+import { dbStatus, dbDumpCreate, dbDumpApply, dbDropAllTables } from '../src/commands/database.js';
+import { deployUat, deployProd, releaseNpmPackage } from '../src/commands/deploy.js';
+import { dev } from '../src/commands/dev.js';
+import { doctor } from '../src/commands/doctor.js';
 import { gen } from '../src/commands/gen.js';
 import {
   gitFix,
@@ -27,7 +24,9 @@ import {
   gitAutoCommit,
   gitS2CFix,
 } from '../src/commands/git.js';
-import { dbStatus, dbDumpCreate, dbDumpApply, dbDropAllTables } from '../src/commands/database.js';
+import { init as runInit } from '../src/commands/init.js';
+import { buildAndroidRelease, buildAndroidDebug } from '../src/commands/reactNative.js';
+import { startSpringBootServices, buildSpringBootServices } from '../src/commands/springBoot.js';
 import {
   workspace,
   workspaceInit,
@@ -35,7 +34,9 @@ import {
   workspaceList,
   workspaceScan,
 } from '../src/commands/workspace.js';
-import { clearCloneConfig, clone } from '../src/commands/clone.js';
+import { configExists, readConfig, isConfigOutdated } from '../src/utils/config.js';
+import { ui } from '../src/utils/ui-helpers.js';
+import { checkDailyUpdate, getUpdateCommandSuggestion } from '../src/utils/version-check.js';
 // Get package.json version
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -48,12 +49,9 @@ async function showWelcomeBanner() {
 
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
-    gradientString('cyan', 'blue')('🚀 Development Kit') +
-      chalk.gray(' v' + version) +
-      '\n' +
-      chalk.cyan('━'.repeat(20)) +
-      '\n' +
-      chalk.white('Fast • Beautiful • Modern ⚡'),
+    `${
+      gradientString('cyan', 'blue')('🚀 Development Kit') + chalk.gray(' v' + version)
+    }\n${chalk.cyan('━'.repeat(20))}\n${chalk.white('Fast • Beautiful • Modern ⚡')}`,
     {
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
       margin: { top: 0, bottom: 1, left: 0, right: 0 },
@@ -67,7 +65,7 @@ async function showWelcomeBanner() {
 }
 
 // Helper function to create styled boxen messages
-function createBox(message: string, color: string, backgroundColor: string = '#0a0a1a') {
+function createBox(message: string, color: string, backgroundColor = '#0a0a1a') {
   return boxen(message, {
     padding: { top: 0, bottom: 0, left: 1, right: 1 },
     margin: { top: 1, bottom: 1, left: 0, right: 0 },
@@ -82,11 +80,9 @@ function showProjectModeRequired() {
   console.log('\n');
   console.log(
     createBox(
-      chalk.red('⚠️ Project Mode Required') +
-        '\n' +
-        chalk.gray('This command requires dk.config.json') +
-        '\n' +
-        chalk.cyan("Run 'dk init' to create project configuration"),
+      `${chalk.red('⚠️ Project Mode Required')}\n${chalk.gray(
+        'This command requires dk.config.json',
+      )}\n${chalk.cyan("Run 'dk init' to create project configuration")}`,
       'red',
       '#1a0000',
     ),
@@ -115,8 +111,8 @@ function isCancellationError(error: any): boolean {
 function createEnhancedCommand(
   name: string,
   description: string,
-  action: Function,
-  requiresProject: boolean = false,
+  action: (...args: any[]) => unknown,
+  requiresProject = false,
 ) {
   return {
     name,
@@ -200,13 +196,11 @@ async function main() {
   const modeIcon = projectMode ? '📁' : '⚡';
   console.log(
     createBox(
-      chalk[modeColor](`${modeIcon} ${mode}`) +
-        '\n' +
-        chalk.gray(
-          projectMode
-            ? 'Running with project configuration'
-            : "Running in standalone mode - some commands require 'dk init'",
-        ),
+      `${chalk[modeColor](`${modeIcon} ${mode}`)}\n${chalk.gray(
+        projectMode
+          ? 'Running with project configuration'
+          : "Running in standalone mode - some commands require 'dk init'",
+      )}`,
       modeColor,
       projectMode ? '#0a1a0a' : '#1a1a00',
     ),
@@ -232,11 +226,11 @@ async function main() {
     .helpOption('-h, --help', chalk.gray('Show help'))
     .configureHelp({
       sortSubcommands: true,
-      subcommandTerm: (cmd) => chalk.cyan('  ' + cmd.name()),
+      subcommandTerm: (cmd) => chalk.cyan(`  ${cmd.name()}`),
       commandUsage: (cmd) => chalk.yellow(cmd.name()) + chalk.gray(' [options]'),
-      commandDescription: (cmd) => '  ' + chalk.gray(cmd.description()),
-      optionTerm: (option) => chalk.green('  ' + option.flags),
-      optionDescription: (option) => '  ' + chalk.gray(option.description),
+      commandDescription: (cmd) => `  ${chalk.gray(cmd.description())}`,
+      optionTerm: (option) => chalk.green(`  ${option.flags}`),
+      optionDescription: (option) => `  ${chalk.gray(option.description)}`,
     });
 
   program
@@ -376,9 +370,9 @@ async function main() {
       try {
         console.log(
           createBox(
-            gradientString('magenta', 'cyan')('🚀 Deployment Center') +
-              '\n' +
-              chalk.gray('Choose your destination'),
+            `${gradientString('magenta', 'cyan')('🚀 Deployment Center')}\n${chalk.gray(
+              'Choose your destination',
+            )}`,
             'magenta',
             '#0a0a1a',
           ),
@@ -474,9 +468,9 @@ async function main() {
       try {
         console.log(
           createBox(
-            gradientString('green', 'blue')('📱 React Native Build Center') +
-              '\n' +
-              chalk.gray('Choose your build target'),
+            `${gradientString('green', 'blue')('📱 React Native Build Center')}\n${chalk.gray(
+              'Choose your build target',
+            )}`,
             'green',
             '#0a1a0a',
           ),
@@ -780,57 +774,29 @@ async function main() {
     console.log('\n');
     console.log(
       createBox(
-        gradientString('blue', 'cyan')('💡 Pro Tips') +
-          '\n' +
-          chalk.gray('• Quick: ') +
-          chalk.cyan('dk c') +
-          chalk.gray(', ') +
-          chalk.cyan('dk dr') +
-          '\n' +
-          chalk.gray('• Dev: ') +
-          chalk.cyan('dk dev') +
-          '\n' +
-          chalk.gray('• Deploy: ') +
-          chalk.cyan('dk d dev') +
-          '\n' +
-          chalk.gray('• Release: ') +
-          chalk.cyan('dk release') +
-          '\n' +
-          chalk.gray('• RN Release: ') +
-          chalk.cyan('dk rn br') +
-          '\n' +
-          chalk.gray('• RN Debug: ') +
-          chalk.cyan('dk rn bd') +
-          '\n' +
-          chalk.gray('• No Clean: ') +
-          chalk.cyan('dk rn brnc') +
-          '\n' +
-          chalk.gray('• Spring Boot: ') +
-          chalk.cyan('dk sb start') +
-          '\n' +
-          chalk.gray('• Generators: ') +
-          chalk.cyan('dk gen') +
-          '\n' +
-          chalk.gray('• Git Fix: ') +
-          chalk.cyan('dk git fix') +
-          '\n' +
-          chalk.gray('• S2C Fix: ') +
-          chalk.cyan('dk s2c fix') +
-          '\n' +
-          chalk.gray('• Git Add & Commit: ') +
-          chalk.cyan('dk git ac') +
-          '\n' +
-          chalk.gray('• Git Add, Commit & Push: ') +
-          chalk.cyan('dk git acp') +
-          '\n' +
-          chalk.gray('• DB Status: ') +
-          chalk.cyan('dk db status') +
-          '\n' +
-          chalk.gray('• DB Dump: ') +
-          chalk.cyan('dk db dump create') +
-          '\n' +
-          chalk.gray('• Help: ') +
-          chalk.cyan('dk --help'),
+        `${gradientString('blue', 'cyan')('💡 Pro Tips')}\n${chalk.gray('• Quick: ')}${chalk.cyan(
+          'dk c',
+        )}${chalk.gray(', ')}${chalk.cyan('dk dr')}\n${chalk.gray('• Dev: ')}${chalk.cyan(
+          'dk dev',
+        )}\n${chalk.gray('• Deploy: ')}${chalk.cyan('dk d dev')}\n${chalk.gray(
+          '• Release: ',
+        )}${chalk.cyan('dk release')}\n${chalk.gray('• RN Release: ')}${chalk.cyan(
+          'dk rn br',
+        )}\n${chalk.gray('• RN Debug: ')}${chalk.cyan('dk rn bd')}\n${chalk.gray(
+          '• No Clean: ',
+        )}${chalk.cyan('dk rn brnc')}\n${chalk.gray('• Spring Boot: ')}${chalk.cyan(
+          'dk sb start',
+        )}\n${chalk.gray('• Generators: ')}${chalk.cyan('dk gen')}\n${chalk.gray(
+          '• Git Fix: ',
+        )}${chalk.cyan('dk git fix')}\n${chalk.gray('• S2C Fix: ')}${chalk.cyan(
+          'dk s2c fix',
+        )}\n${chalk.gray('• Git Add & Commit: ')}${chalk.cyan('dk git ac')}\n${chalk.gray(
+          '• Git Add, Commit & Push: ',
+        )}${chalk.cyan('dk git acp')}\n${chalk.gray('• DB Status: ')}${chalk.cyan(
+          'dk db status',
+        )}\n${chalk.gray('• DB Dump: ')}${chalk.cyan('dk db dump create')}\n${chalk.gray(
+          '• Help: ',
+        )}${chalk.cyan('dk --help')}`,
         'blue',
       ),
     );
@@ -981,7 +947,7 @@ async function showInteractiveMenu(projectMode: boolean) {
     }
 
     const selected = choices.find((c) => c.value === selectedCommand);
-    if (selected && selected.command) {
+    if (selected?.command) {
       console.log(chalk.cyan(`\n▶ Running: dk ${selected.command}\n`));
       await executeCommand(selected.command, projectMode);
     }
@@ -1005,7 +971,9 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
       await runInit();
       break;
     case 'clean':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       await clean();
       break;
     case 'clone':
@@ -1018,7 +986,9 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
 
       break;
     case 'dev':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       await dev();
       break;
     case 'doctor':
@@ -1028,7 +998,9 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
       await workspace();
       break;
     case 'deploy':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       // Show deploy menu
       const { environment } = await inquirer.prompt({
         type: 'list',
@@ -1045,15 +1017,22 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
           },
         ],
       });
-      if (environment === 'dev') await deployUat();
-      else await deployProd();
+      if (environment === 'dev') {
+        await deployUat();
+      } else {
+        await deployProd();
+      }
       break;
     case 'release':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       await releaseNpmPackage();
       break;
     case 'rn':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       // Show RN build menu
       const { buildType } = await inquirer.prompt({
         type: 'list',
@@ -1078,32 +1057,52 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
           },
         ],
       });
-      if (buildType === 'release') await buildAndroidRelease();
-      else if (buildType === 'release-nc') await buildAndroidRelease(true);
-      else if (buildType === 'debug') await buildAndroidDebug();
-      else if (buildType === 'debug-nc') await buildAndroidDebug(true);
+      if (buildType === 'release') {
+        await buildAndroidRelease();
+      } else if (buildType === 'release-nc') {
+        await buildAndroidRelease(true);
+      } else if (buildType === 'debug') {
+        await buildAndroidDebug();
+      } else if (buildType === 'debug-nc') {
+        await buildAndroidDebug(true);
+      }
       break;
     case 'sb':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       await startSpringBootServices();
       break;
     case 'gen':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       await gen();
       break;
     case 'commit':
-      if (!projectMode) showProjectModeRequired();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
       await gitAutoCommit();
       break;
     case 'git':
-      if (subCmd === 'fix') await gitFix();
-      else if (subCmd === 'ac') await gitAddCommit();
-      else if (subCmd === 'acp') await gitAddCommitPush();
+      if (subCmd === 'fix') {
+        await gitFix();
+      } else if (subCmd === 'ac') {
+        await gitAddCommit();
+      } else if (subCmd === 'acp') {
+        await gitAddCommitPush();
+      }
       break;
     case 'db':
-      if (!projectMode) showProjectModeRequired();
-      if (subCmd === 'status') await dbStatus();
-      else if (parts[1] === 'dump' && parts[2] === 'create') await dbDumpCreate();
+      if (!projectMode) {
+        showProjectModeRequired();
+      }
+      if (subCmd === 'status') {
+        await dbStatus();
+      } else if (parts[1] === 'dump' && parts[2] === 'create') {
+        await dbDumpCreate();
+      }
       break;
     case '--help':
       process.argv = ['node', 'dk', '--help'];

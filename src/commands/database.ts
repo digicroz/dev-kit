@@ -1,11 +1,20 @@
+import { execSync, spawn } from 'node:child_process';
+import {
+  existsSync,
+  readFileSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
+  createReadStream,
+} from 'node:fs';
+import { join } from 'node:path';
+
 import chalk from 'chalk';
+import inquirer from 'inquirer';
+
+import type { DKConfig, DatabaseType } from '../types/config.js';
 import { readConfig } from '../utils/config.js';
 import { ui } from '../utils/ui-helpers.js';
-import { DKConfig, DatabaseType } from '../types/config.js';
-import { existsSync, readFileSync, mkdirSync, readdirSync, statSync, createReadStream } from 'fs';
-import { join } from 'path';
-import { execSync, spawn } from 'child_process';
-import inquirer from 'inquirer';
 
 // Load environment variables from .env file in the current working directory
 function loadEnvFile(rootDir: string = process.cwd()): {
@@ -295,7 +304,7 @@ async function testDatabaseConnection(
       default:
         return {
           success: false,
-          error: `Unsupported database type: ${dbType}`,
+          error: `Unsupported database type: ${String(dbType)}`,
         };
     }
   } catch (error: any) {
@@ -388,7 +397,7 @@ async function testSQLiteConnection(
     // Extract file path from URL
     const dbPath = dbUrl.replace('sqlite://', '').replace('sqlite3://', '');
 
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err: any) => {
         if (err) {
           resolve({
@@ -755,7 +764,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         type: 'list',
         name: 'selectedDumpChoice',
         message: 'Select a dump to apply:',
-        choices: choices,
+        choices,
         default: choices[0]?.value, // Default to latest (first in sorted list)
       });
 
@@ -768,7 +777,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
     }
 
     // Check if database has existing tables
-    const mysql = await import('mysql2/promise' as any);
+    const mysql = await import('mysql2/promise');
     const connection = await mysql.createConnection(dbUrl);
 
     try {
@@ -874,7 +883,6 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         const fileStream = createReadStream(selectedDump.fullPath);
 
         // Simple status updates without misleading progress percentage
-        let statusUpdateInterval: NodeJS.Timeout;
         let dots = 0;
 
         const updateStatus = () => {
@@ -884,7 +892,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         };
 
         // Update status every 2 seconds to show activity
-        statusUpdateInterval = setInterval(updateStatus, 2000);
+        const statusUpdateInterval = setInterval(updateStatus, 2000);
 
         // Pipe file to mysql process
         fileStream.pipe(mysqlProcess.stdin);
@@ -1060,7 +1068,7 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
     dropSpinner.start();
 
     // Connect to MySQL and execute the drop tables script
-    const mysql = await import('mysql2/promise' as any);
+    const mysql = await import('mysql2/promise');
     const connection = await mysql.createConnection(dbUrl);
 
     try {
@@ -1163,7 +1171,7 @@ function maskDatabaseUrl(url: string): string {
       urlObj.password = '***';
     }
     if (urlObj.username) {
-      urlObj.username = urlObj.username.slice(0, 2) + '***';
+      urlObj.username = `${urlObj.username.slice(0, 2)}***`;
     }
     return urlObj.toString();
   } catch {

@@ -1,15 +1,17 @@
+import { exec, spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { promisify } from 'node:util';
+
+import search from '@inquirer/search';
+import chalk from 'chalk';
 /* eslint-disable @typescript-eslint/no-explicit-any -- ponytail: inquirer answers and chalk lookups are untyped here; type them properly if this file grows. */
 // Workspace command implementation
 import inquirer from 'inquirer';
-import search from '@inquirer/search';
-import chalk from 'chalk';
 import ora from 'ora';
-import { existsSync } from 'fs';
-import { resolve } from 'path';
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
+
+import type { Workspace, WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
 import { ui } from '../utils/ui-helpers.js';
-import { ensureCloneBaseDir } from './clone.js';
 import {
   getWorkspaceConfigPath,
   workspaceConfigExists,
@@ -24,9 +26,16 @@ import {
   getReposRoot,
   REPO_CONFIG_FILE,
 } from '../utils/workspace-config.js';
-import type { Workspace, WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
+import { ensureCloneBaseDir } from './clone.js';
 
 const execAsync = promisify(exec);
+
+// Default opener is `xdg-open` (Linux and everything else).
+const URL_OPENERS: Partial<Record<NodeJS.Platform, string>> = { win32: 'start', darwin: 'open' };
+const FOLDER_OPENERS: Partial<Record<NodeJS.Platform, string>> = {
+  win32: 'explorer',
+  darwin: 'open',
+};
 
 // Initialize workspace configuration
 export async function workspaceInit() {
@@ -76,8 +85,12 @@ export async function workspaceInit() {
         name: 'filePath',
         message: 'Enter the path to the workspace config file:',
         validate: (input) => {
-          if (!input) return 'Path is required';
-          if (!existsSync(input)) return 'File does not exist';
+          if (!input) {
+            return 'Path is required';
+          }
+          if (!existsSync(input)) {
+            return 'File does not exist';
+          }
           return true;
         },
       });
@@ -174,8 +187,12 @@ async function executeAction(
         const { stdout, stderr } = await execAsync(action.command, {
           cwd: modulePath,
         });
-        if (stdout) console.log(chalk.gray(stdout));
-        if (stderr) console.log(chalk.yellow(stderr));
+        if (stdout) {
+          console.log(chalk.gray(stdout));
+        }
+        if (stderr) {
+          console.log(chalk.yellow(stderr));
+        }
         console.log(chalk.green(`  ✓ Command completed`));
       } catch (error: any) {
         console.log(chalk.red(`  ✗ Command failed: ${error.message}`));
@@ -198,8 +215,12 @@ async function executeAction(
         const { stdout, stderr } = await execAsync(scriptCmd, {
           cwd: modulePath,
         });
-        if (stdout) console.log(chalk.gray(stdout));
-        if (stderr) console.log(chalk.yellow(stderr));
+        if (stdout) {
+          console.log(chalk.gray(stdout));
+        }
+        if (stderr) {
+          console.log(chalk.yellow(stderr));
+        }
         console.log(chalk.green(`  ✓ Script completed`));
       } catch (error: any) {
         console.log(chalk.red(`  ✗ Script failed: ${error.message}`));
@@ -213,13 +234,7 @@ async function executeAction(
       }
       console.log(chalk.gray(`  → Opening URL: ${action.url}`));
       try {
-        const isWindows = process.platform === 'win32';
-        const isMac = process.platform === 'darwin';
-        const openCmd = isWindows
-          ? `start ${action.url}`
-          : isMac
-            ? `open ${action.url}`
-            : `xdg-open ${action.url}`;
+        const openCmd = `${URL_OPENERS[process.platform] ?? 'xdg-open'} ${action.url}`;
 
         await execAsync(openCmd);
         console.log(chalk.green(`  ✓ URL opened`));
@@ -231,13 +246,7 @@ async function executeAction(
     case 'open-folder':
       console.log(chalk.gray(`  → Opening folder: ${modulePath}`));
       try {
-        const isWindows = process.platform === 'win32';
-        const isMac = process.platform === 'darwin';
-        const openCmd = isWindows
-          ? `explorer "${modulePath}"`
-          : isMac
-            ? `open "${modulePath}"`
-            : `xdg-open "${modulePath}"`;
+        const openCmd = `${FOLDER_OPENERS[process.platform] ?? 'xdg-open'} "${modulePath}"`;
 
         await execAsync(openCmd);
         console.log(chalk.green(`  ✓ Folder opened`));
@@ -247,7 +256,9 @@ async function executeAction(
       break;
 
     default:
-      console.log(chalk.red(`  ✗ Unknown action type: ${action.type}`));
+      console.log(
+        chalk.red(`  ✗ Unknown action type: ${String((action as { type: string }).type)}`),
+      );
   }
 }
 
@@ -278,7 +289,9 @@ async function processModules(modules: WorkspaceModule[], workspaceName: string)
 // Main workspace selector
 export async function workspace() {
   const { config, warning } = loadWorkspaceConfig();
-  if (warning) ui.warning('Scan problem', warning);
+  if (warning) {
+    ui.warning('Scan problem', warning);
+  }
 
   if (config.workspaces.length === 0) {
     ui.warning(
@@ -306,7 +319,9 @@ export async function workspace() {
     pageSize: 15,
     source: (term) => {
       const q = term?.trim().toLowerCase();
-      if (!q) return workspaceChoices;
+      if (!q) {
+        return workspaceChoices;
+      }
       return workspaceChoices.filter((c, i) => {
         const ws = config.workspaces[i];
         return [ws.name, ws.description ?? '', ...ws.modules.map((m) => m.name)].some((s) =>
@@ -341,7 +356,7 @@ export async function workspace() {
     return;
   }
 
-  let selectedModules: WorkspaceModule[] = [];
+  let selectedModules: WorkspaceModule[];
 
   if (openMode === 'default') {
     selectedModules = workspace.modules.filter((m) => m.isIncludeByDefault);
@@ -385,7 +400,9 @@ export async function workspace() {
 export async function workspaceScan(dir?: string) {
   // Default: the dk clone repos folder, then the current directory.
   const root = resolve(dir ?? getReposRoot() ?? '.');
-  if (!existsSync(root)) return ui.error('Directory not found', root);
+  if (!existsSync(root)) {
+    return ui.error('Directory not found', root);
+  }
   console.log(chalk.gray(`Scanning ${root}`));
 
   let found;
@@ -394,7 +411,9 @@ export async function workspaceScan(dir?: string) {
   } catch (error: any) {
     return ui.error('Scan failed', error.message);
   }
-  if (found.length === 0) return ui.warning(`No ${REPO_CONFIG_FILE} found under ${root}`);
+  if (found.length === 0) {
+    return ui.warning(`No ${REPO_CONFIG_FILE} found under ${root}`);
+  }
 
   console.log(chalk.cyan(`\n🔍 Found ${found.length} module(s):\n`));
   for (const { workspace, module } of found) {
@@ -413,9 +432,13 @@ export async function workspaceScan(dir?: string) {
     message: 'Add/update these in your workspace config?',
     default: true,
   });
-  if (!ok) return ui.info('Operation cancelled');
+  if (!ok) {
+    return ui.info('Operation cancelled');
+  }
 
-  if (!workspaceConfigExists()) initWorkspaceConfig();
+  if (!workspaceConfigExists()) {
+    initWorkspaceConfig();
+  }
   const config = readWorkspaceConfig();
   mergeScanned(config, found);
   writeWorkspaceConfig(config);
@@ -425,7 +448,9 @@ export async function workspaceScan(dir?: string) {
 // List all workspaces
 export async function workspaceList() {
   const { config, warning } = loadWorkspaceConfig();
-  if (warning) ui.warning('Scan problem', warning);
+  if (warning) {
+    ui.warning('Scan problem', warning);
+  }
 
   if (config.workspaces.length === 0) {
     ui.warning(
