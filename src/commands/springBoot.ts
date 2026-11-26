@@ -138,7 +138,7 @@ async function startService(
     });
 
     // Handle process exit
-    childProcess.on('exit', (code, signal) => {
+    childProcess.on('exit', (code) => {
       if (code !== 0 && code !== null) {
         const error = `${service.name} exited with code ${code}`;
         ui.error(error);

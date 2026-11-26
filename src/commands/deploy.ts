@@ -248,7 +248,7 @@ function incrementVersion(version: string): string {
     displayError('Invalid version format. All parts must be numbers.');
   }
 
-  return `${major}.${minor}.${patch + 1}`;
+  return `${major}.${minor}.${(patch ?? 0) + 1}`;
 }
 
 /**

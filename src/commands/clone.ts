@@ -1,15 +1,13 @@
 import { exec, execSync } from 'node:child_process';
-import fs, { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import fs, { existsSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
-import path, { dirname, join } from 'node:path';
-import { promisify } from 'node:util';
+import path from 'node:path';
 
 import inquirer from 'inquirer';
 
 import type { CloneConfig, osTypes } from '../types/clone';
 import { getCloneConfigPath, readCloneConfig, writeCloneConfig } from '../utils/clone-config';
 import { ui } from '../utils/ui-helpers';
-const execAsync = promisify(exec);
 
 function getRootDrives(): Promise<string[]> {
   return new Promise((resolve, reject) => {
@@ -33,8 +31,9 @@ function getRootDrives(): Promise<string[]> {
 // Pick (once) the drive/folder that holds 'digicroz-repos'. Called by `dk ws init`.
 export async function ensureCloneBaseDir(): Promise<string> {
   const config = readCloneConfig();
-  if (config && config.clones.length > 0) {
-    return config.clones[0].baseDir;
+  const firstClone = config?.clones[0];
+  if (firstClone) {
+    return firstClone.baseDir;
   }
   let baseDir: string;
   const osType = os.platform() as osTypes;
@@ -70,7 +69,7 @@ export async function ensureCloneBaseDir(): Promise<string> {
 async function formatTargetDir(repoUrl: string): Promise<string> {
   const parts = repoUrl.split('/');
   let repoName = parts[parts.length - 1];
-  if (!repoName.includes('--')) {
+  if (!repoName?.includes('--')) {
     ui.error('Invalid repository link. Expected format: project--module');
     process.exit(1);
   }
@@ -78,11 +77,11 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
   repoName = repoName.replace(/--/g, '/');
 
   const config = readCloneConfig();
-  if (!config || config.clones.length === 0) {
+  const baseDir = config?.clones[0]?.baseDir;
+  if (!baseDir) {
     ui.error('Clone directory not set up', "Run 'dk workspace init' first");
     process.exit(1);
   }
-  const baseDir = config.clones[0].baseDir;
 
   return path.join(baseDir, 'digicroz-repos', repoName);
 }

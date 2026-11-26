@@ -205,6 +205,9 @@ async function detectAndConfigureSpringBootServices(): Promise<SpringBootConfig 
 
     for (let i = 0; i < potentialServices.length; i++) {
       const serviceName = potentialServices[i];
+      if (!serviceName) {
+        continue;
+      }
 
       const { includeService } = await inquirer.prompt({
         type: 'confirm',

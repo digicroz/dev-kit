@@ -127,7 +127,7 @@ export async function dbStatus(): Promise<void> {
 
   // Check available database drivers
   ui.info('Database drivers status', 'All database drivers are bundled with DK CLI');
-  const availableDrivers = await checkAvailableDrivers();
+  await checkAvailableDrivers();
 
   console.log('');
   ui.info('Database Driver Status:', 'Available database connection libraries');
@@ -469,7 +469,7 @@ function getNextDumpVersion(dumpsDir: string): number {
   for (const file of files) {
     const match = file.match(versionPattern);
     if (match) {
-      const version = parseInt(match[1], 10);
+      const version = parseInt(match[1] ?? '', 10);
       maxVersion = Math.max(maxVersion, version);
     }
   }
@@ -491,7 +491,7 @@ function parseDatabaseUrl(url: string): {
     port: parseInt(urlObj.port) || 3306,
     username: urlObj.username,
     password: urlObj.password,
-    database: urlObj.pathname.slice(1).split('?')[0], // Remove leading slash and query params
+    database: urlObj.pathname.slice(1).split('?')[0] ?? '', // Remove leading slash and query params
   };
 }
 
@@ -713,7 +713,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         if (match) {
           return {
             filename: file,
-            version: parseInt(match[1]),
+            version: parseInt(match[1] ?? ''),
             timestamp: match[2],
             size: stats.size,
             created: stats.mtime,

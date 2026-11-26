@@ -9,7 +9,7 @@ Migrated from ESLint + Prettier + tsup to oxlint (type-aware via oxlint-tsgolint
 | ------------------------- | ---------------------------------------------------- |
 | `build` / `dev`           | `tsdown` / `tsdown --watch` (`tsdown.config.ts`)     |
 | `lint`                    | `oxlint --fix`                                       |
-| `lint:check`              | `oxlint --max-warnings 216` (errors fail; see below) |
+| `lint:check`              | `oxlint --max-warnings 199` (errors fail; see below) |
 | `format` / `format:check` | `oxfmt` / `oxfmt --check`                            |
 | `typecheck`               | `tsc --noEmit`                                       |
 | `check`                   | lint:check + format:check + typecheck                |
@@ -30,17 +30,24 @@ comment), `no-useless-*`, `no-else-return`, `no-nested-ternary`, `no-param-reass
 `typescript/no-non-null-assertion`, `typescript/ban-ts-comment` (needs a description), floating and
 misused promises, and unnecessary conditions or assertions.
 
-**Warning ratchet.** The existing code has 216 warnings (mostly `no-explicit-any`,
+**Warning ratchet.** The existing code has 199 warnings (mostly `no-explicit-any`,
 `prefer-nullish-coalescing`, `no-unsafe-type-assertion`, `no-unnecessary-condition`). They are not
-fixed in this migration. `lint:check` uses `--max-warnings 216`, so new warnings fail CI. **When you
+fixed in this migration. `lint:check` uses `--max-warnings 199`, so new warnings fail CI. **When you
 fix some, lower the number in `package.json`.**
 
 ## Notes
 
 - `tsconfig.json`: `moduleResolution` is now `Bundler` (`Node`/node10 is removed in the native
   tsgolint) and `target` is `ES2022` (needed for `new Error(msg, { cause })`).
-- `typescript` stays on 5.x: tsdown's `dts` generation uses the TypeScript API, which 7.0 no longer
-  ships. If you move to 7, set `dts: false` and emit types with `tsc --emitDeclarationOnly`.
+- `typescript` is 7.0.x (native compiler, still shipped as `tsc`). tsdown 0.23 generates `.d.ts` via
+  its `tsgo` generator, which works but prints a deprecation warning on 7.0 ("removed in the next
+  minor, upgrade to 7.1+"). **When TypeScript 7.1 is out, upgrade it together with tsdown.** If dts
+  generation breaks, set `dts: false` in `tsdown.config.ts` and emit types with
+  `tsc --emitDeclarationOnly`.
+- `tsconfig.json` is strict beyond `strict: true`: `noUncheckedIndexedAccess`,
+  `exactOptionalPropertyTypes`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`,
+  `noPropertyAccessFromIndexSignature`, `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax`,
+  `isolatedModules`, `noUncheckedSideEffectImports`, `erasableSyntaxOnly`.
 - The destructured exports at the end of `ui-helpers.ts` (`success`, `error`, ...) were removed: nothing
   used them and they lose `this` when destructured.
 - VS Code: install `oxc.oxc-vscode`. It keeps `oxlint --lsp` / `oxfmt --lsp` running, which lock binaries

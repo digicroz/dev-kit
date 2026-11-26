@@ -236,5 +236,6 @@ export function loadWorkspaceConfig(): { config: WorkspaceConfig; warning?: stri
     }
   }
   config.workspaces.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); // stable: ties keep existing order
-  return { config, warning: warnings.join('; ') || undefined };
+  const warning = warnings.join('; ');
+  return { config, ...(warning && { warning }) };
 }

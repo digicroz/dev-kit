@@ -214,7 +214,7 @@ function runGradleBuildWithProgress(buildCommand: string, buildType: string): Pr
 
       const taskMatch = trimmed.match(/^> Task :(.+)$/);
 
-      if (taskMatch) {
+      if (taskMatch?.[1]) {
         updateSpinner(taskMatch[1]);
       }
 
@@ -282,7 +282,7 @@ function capitalize(value: string): string {
 
 // Enhanced clean function with detailed progress
 function runGradleCleanWithProgress(): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Show what will be cleaned
     console.log(
       boxen(
@@ -444,7 +444,7 @@ function runGradleCleanWithProgress(): Promise<void> {
       }
     });
 
-    gradleProcess.on('error', (error) => {
+    gradleProcess.on('error', () => {
       clearInterval(progressInterval);
       spinner.warn(chalk.yellow('⚠ Clean process had issues, continuing...'));
       resolve(); // Don't reject, just warn and continue

@@ -5,7 +5,6 @@ import { resolve } from 'node:path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 
-import { DKProjectType } from '../types/config.js';
 import { readConfig } from '../utils/config.js';
 import { ui } from '../utils/ui-helpers.js';
 
@@ -316,12 +315,13 @@ export const gitFix = async () => {
 
   let scopesToFix: GitConfigScope[];
 
-  if (choices.length === 1) {
+  const [onlyChoice] = choices;
+  if (choices.length === 1 && onlyChoice) {
     // Only one option available, ask for confirmation
     const { proceed } = await inquirer.prompt({
       type: 'confirm',
       name: 'proceed',
-      message: `Fix ${choices[0].value} git configuration?`,
+      message: `Fix ${onlyChoice.value} git configuration?`,
       default: true,
     });
 
@@ -330,7 +330,7 @@ export const gitFix = async () => {
       return { ok: false, cancelled: true };
     }
 
-    scopesToFix = [choices[0].value];
+    scopesToFix = [onlyChoice.value];
   } else {
     // Multiple options, let user choose
     const { scope } = await inquirer.prompt({
@@ -502,11 +502,11 @@ const ensureS2CIgnoreEntry = (s2cDir: string): { changed: boolean; pattern: stri
   } else if (hasMarker) {
     const markerIndex = updatedLines.map((line) => line.trim()).lastIndexOf(marker);
     updatedLines.splice(markerIndex + 1, 0, pattern);
-    if (updatedLines[updatedLines.length - 1].trim() !== '') {
+    if (updatedLines[updatedLines.length - 1]?.trim() !== '') {
       updatedLines.push('');
     }
   } else {
-    if (updatedLines[updatedLines.length - 1].trim() !== '') {
+    if (updatedLines[updatedLines.length - 1]?.trim() !== '') {
       updatedLines.push('');
     }
     updatedLines.push(marker, pattern, '');

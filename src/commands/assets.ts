@@ -88,12 +88,18 @@ function setInTree(tree: any, pathParts: string[], leafValue: string): void {
   let node = tree;
   for (let i = 0; i < pathParts.length - 1; i++) {
     const part = pathParts[i];
+    if (part === undefined) {
+      continue;
+    }
     if (!node[part]) {
       node[part] = {};
     }
     node = node[part];
   }
-  node[pathParts[pathParts.length - 1]] = leafValue;
+  const leaf = pathParts[pathParts.length - 1];
+  if (leaf !== undefined) {
+    node[leaf] = leafValue;
+  }
 }
 
 function sortObjectKeysDeep(obj: any): any {

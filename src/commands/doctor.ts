@@ -54,7 +54,7 @@ export async function doctor(): Promise<void> {
   // Check Node.js version compatibility
   try {
     const nodeVersion = process.version;
-    const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
+    const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0] ?? '');
 
     if (majorVersion >= 18) {
       checks.push({

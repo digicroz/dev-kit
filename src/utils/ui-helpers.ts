@@ -100,7 +100,7 @@ export class UIHelper {
   /**
    * Create a beautiful gradient text
    */
-  public gradientText(text: string, colors: [string, string] = ['#ff6b6b', '#4ecdc4']): string {
+  public gradientText(text: string, _colors: [string, string] = ['#ff6b6b', '#4ecdc4']): string {
     return gradientString.rainbow(text);
   }
 

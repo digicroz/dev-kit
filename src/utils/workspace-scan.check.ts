@@ -15,13 +15,13 @@ writeFileSync(join(root, 'b', 'c', 'ws.dk.json'), JSON.stringify({ workspace: 'W
 
 const found = scanForRepoConfigs(root);
 assert.equal(found.length, 2);
-assert.equal(found[1].module.name, 'c'); // name defaults to folder
+assert.equal(found[1]?.module.name, 'c'); // name defaults to folder
 
 const cfg = { version: '1', workspaces: [] as Workspace[] };
 mergeScanned(cfg, found);
 mergeScanned(cfg, found); // idempotent
 assert.equal(cfg.workspaces.length, 1);
-assert.equal(cfg.workspaces[0].modules.length, 2);
+assert.equal(cfg.workspaces[0]?.modules.length, 2);
 mkdirSync(join(root, 'd'));
 writeFileSync(join(root, 'd', 'ws.dk.json'), JSON.stringify({ workspace: 'First', order: -1 }));
 mergeScanned(cfg, scanForRepoConfigs(root));

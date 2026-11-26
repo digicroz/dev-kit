@@ -50,7 +50,7 @@ async function showWelcomeBanner() {
   // Compact welcome box with better styling
   const welcomeMessage = boxen(
     `${
-      gradientString('cyan', 'blue')('🚀 Development Kit') + chalk.gray(' v' + version)
+      gradientString('cyan', 'blue')('🚀 Development Kit') + chalk.gray(` v${version}`)
     }\n${chalk.cyan('━'.repeat(20))}\n${chalk.white('Fast • Beautiful • Modern ⚡')}`,
     {
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -1107,6 +1107,8 @@ async function executeCommand(commandStr: string, projectMode: boolean) {
     case '--help':
       process.argv = ['node', 'dk', '--help'];
       await main();
+      break;
+    default:
       break;
   }
 }

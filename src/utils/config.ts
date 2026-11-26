@@ -6,10 +6,6 @@ import {
   type DKProjectType,
   type DatabaseConfig,
   DK_CONFIG_LATEST_VERSION,
-  DatabaseType,
-  SpringBootConfig,
-  GeneratorsConfig,
-  AssetsTypeGeneratorConfig,
 } from '../types/config';
 
 const CONFIG_FILE = 'dk.config.json';
@@ -252,7 +248,7 @@ export function migrateConfigIfNeeded(config: DKConfig): DKConfig {
   const oldAssets = config.assetsTypeGenerator;
   const imagesDir = oldAssets.imagesDir;
 
-  const baseDir = imagesDir.split('/')[0];
+  const baseDir = imagesDir.split('/')[0] ?? '';
   const imageBaseDir = imagesDir.substring(baseDir.length + 1) || 'images';
 
   const newConfig: DKConfig = {

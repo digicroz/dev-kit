@@ -81,7 +81,7 @@ const expand = async (items: CleanItem[], dryRun: boolean) => {
   return flat;
 };
 
-const rmPath = async (p: string, isDir: boolean) => {
+const rmPath = async (p: string) => {
   try {
     const stat = await fs.stat(p).catch(() => null);
     const bytes = stat?.size ?? 0;
@@ -106,7 +106,7 @@ const clearDirectoryContents = async (directory: string, dryRun: boolean) => {
 
   for (const entry of entries) {
     const path = join(directory, entry.name);
-    const res = await rmPath(path, entry.isDirectory());
+    const res = await rmPath(path);
     if (res.ok) {
       if (entry.isDirectory()) {
         dirs++;
@@ -158,7 +158,7 @@ export const clean = async () => {
 
   const args = process.argv.slice(2).map((a) => a.toLowerCase());
   const dryRun = Boolean(argv['dry-run']);
-  const autoYes = Boolean(argv.yes);
+  const autoYes = Boolean(argv['yes']);
   const nmOnly = args.includes('nm') || args.includes('node_modules');
   const s2cOnly = args.includes('s2c');
   const s2sOnly = args.includes('s2s');
@@ -203,9 +203,9 @@ export const clean = async () => {
 
   const rnDetected = await isReactNative();
   let cleanMode: 'all' | 'node' | 'rn-android' | 'rn-ios' =
-    argv.mode || (rnDetected ? 'all' : 'node');
+    argv['mode'] || (rnDetected ? 'all' : 'node');
 
-  if (rnDetected && !argv.mode && !autoYes) {
+  if (rnDetected && !argv['mode'] && !autoYes) {
     const { mode } = await inquirer.prompt({
       type: 'list',
       name: 'mode',
@@ -300,7 +300,7 @@ export const clean = async () => {
     if (dryRun) {
       continue;
     }
-    const res = await rmPath(entry.path, entry.isDir);
+    const res = await rmPath(entry.path);
     if (res.ok) {
       if (entry.isDir) {
         dirs++;

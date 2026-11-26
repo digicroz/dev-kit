@@ -10,7 +10,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 
-import type { Workspace, WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
+import type { WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
 import { ui } from '../utils/ui-helpers.js';
 import {
   getWorkspaceConfigPath,
@@ -141,8 +141,6 @@ async function executeAction(
   modulePath: string,
   moduleName: string,
 ): Promise<void> {
-  const actionDesc = action.description || action.type;
-
   switch (action.type) {
     case 'open-in-vscode':
       console.log(chalk.gray(`  → Opening ${moduleName} in VS Code...`));
@@ -322,8 +320,11 @@ export async function workspace() {
       if (!q) {
         return workspaceChoices;
       }
-      return workspaceChoices.filter((c, i) => {
+      return workspaceChoices.filter((_c, i) => {
         const ws = config.workspaces[i];
+        if (!ws) {
+          return false;
+        }
         return [ws.name, ws.description ?? '', ...ws.modules.map((m) => m.name)].some((s) =>
           s.toLowerCase().includes(q),
         );
