@@ -3,6 +3,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync } from 'fs';
+import { resolve } from 'path';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { ui } from '../utils/ui-helpers.js';
@@ -13,6 +14,11 @@ import {
   readWorkspaceConfig,
   writeWorkspaceConfig,
   importWorkspaceConfig,
+  scanForRepoConfigs,
+  mergeScanned,
+  loadWorkspaceConfig,
+  getReposRoot,
+  REPO_CONFIG_FILE,
 } from '../utils/workspace-config.js';
 import type { Workspace, WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
 
@@ -262,15 +268,14 @@ async function processModules(modules: WorkspaceModule[], workspaceName: string)
 
 // Main workspace selector
 export async function workspace() {
-  if (!workspaceConfigExists()) {
-    ui.error('Workspace config not found', "Run 'dk workspace init' to create one");
-    return;
-  }
-
-  const config = readWorkspaceConfig();
+  const { config, warning } = loadWorkspaceConfig();
+  if (warning) ui.warning('Scan problem', warning);
 
   if (config.workspaces.length === 0) {
-    ui.warning('No workspaces configured', "Run 'dk workspace config' to add workspaces");
+    ui.warning(
+      'No workspaces configured',
+      `Add a ${REPO_CONFIG_FILE} to your repos, or run 'dk workspace init' to create a config`,
+    );
     return;
   }
 
@@ -359,17 +364,57 @@ export async function workspace() {
   await processModules(selectedModules, workspace.name);
 }
 
-// List all workspaces
-export async function workspaceList() {
-  if (!workspaceConfigExists()) {
-    ui.error('Workspace config not found', "Run 'dk workspace init' to create one");
-    return;
+// Scan a directory for ws.dk.json files and merge them into the workspace config
+export async function workspaceScan(dir?: string) {
+  // Default: the dk clone repos folder, then the current directory.
+  const root = resolve(dir ?? getReposRoot() ?? '.');
+  if (!existsSync(root)) return ui.error('Directory not found', root);
+  console.log(chalk.gray(`Scanning ${root}`));
+
+  let found;
+  try {
+    found = scanForRepoConfigs(root);
+  } catch (error: any) {
+    return ui.error('Scan failed', error.message);
+  }
+  if (found.length === 0) return ui.warning(`No ${REPO_CONFIG_FILE} found under ${root}`);
+
+  console.log(chalk.cyan(`\n🔍 Found ${found.length} module(s):\n`));
+  for (const { workspace, module } of found) {
+    console.log(`  ${chalk.bold(workspace)} / ${module.name} ${chalk.gray(module.path)}`);
+    for (const a of module.actions) {
+      if (a.type === 'run-command' || a.type === 'run-script') {
+        console.log(chalk.yellow(`     runs: ${a.command ?? a.scriptPath}`));
+      }
+    }
   }
 
+  // Repo files are untrusted input: they can run commands on this machine.
+  const { ok } = await inquirer.prompt({
+    type: 'confirm',
+    name: 'ok',
+    message: 'Add/update these in your workspace config?',
+    default: true,
+  });
+  if (!ok) return ui.info('Operation cancelled');
+
+  if (!workspaceConfigExists()) initWorkspaceConfig();
   const config = readWorkspaceConfig();
+  mergeScanned(config, found);
+  writeWorkspaceConfig(config);
+  ui.success(`Merged ${found.length} module(s)`, `Location: ${getWorkspaceConfigPath()}`);
+}
+
+// List all workspaces
+export async function workspaceList() {
+  const { config, warning } = loadWorkspaceConfig();
+  if (warning) ui.warning('Scan problem', warning);
 
   if (config.workspaces.length === 0) {
-    ui.warning('No workspaces configured', "Run 'dk workspace config' to add workspaces");
+    ui.warning(
+      'No workspaces configured',
+      `Add a ${REPO_CONFIG_FILE} to your repos, or run 'dk workspace init' to create a config`,
+    );
     return;
   }
 

@@ -1,8 +1,9 @@
 // Workspace configuration management
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
-import { join, dirname } from 'path';
-import type { WorkspaceConfig } from '../types/workspace.js';
+import { join, dirname, basename } from 'path';
+import type { WorkspaceConfig, WorkspaceModule } from '../types/workspace.js';
+import { readCloneConfig } from './clone-config.js';
 
 // Get the workspace config file path based on OS
 export function getWorkspaceConfigPath(): string {
@@ -122,5 +123,77 @@ export function importWorkspaceConfig(filePath: string): WorkspaceConfig {
     return config;
   } catch (error) {
     throw new Error(`Failed to import workspace config: ${error}`);
+  }
+}
+
+// ---- ws.dk.json: per-repo module descriptor, discovered by `dk ws scan` ----
+export const REPO_CONFIG_FILE = 'ws.dk.json';
+
+export interface ScannedModule {
+  workspace: string;
+  module: WorkspaceModule;
+}
+
+// Look for ws.dk.json in dir and up to `depth` levels below it.
+// ponytail: plain recursive readdir; fine for a projects folder, slow if pointed at a drive root.
+export function scanForRepoConfigs(dir: string, depth = 2): ScannedModule[] {
+  const found: ScannedModule[] = [];
+  const file = join(dir, REPO_CONFIG_FILE);
+  if (existsSync(file)) {
+    const c = JSON.parse(readFileSync(file, 'utf-8'));
+    if (!c.workspace) throw new Error(`${file}: "workspace" is required`);
+    found.push({
+      workspace: c.workspace,
+      module: {
+        name: c.name || basename(dir),
+        path: dir,
+        isIncludeByDefault: c.isIncludeByDefault ?? true,
+        defaultActionIndex: c.defaultActionIndex ?? 0,
+        actions: c.actions ?? [{ type: 'open-in-vscode' }],
+      },
+    });
+  }
+  if (depth > 0) {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory() && e.name !== 'node_modules' && !e.name.startsWith('.')) {
+        found.push(...scanForRepoConfigs(join(dir, e.name), depth - 1));
+      }
+    }
+  }
+  return found;
+}
+
+// Merge scanned modules into config: workspace by name, module by path (update in place).
+export function mergeScanned(config: WorkspaceConfig, found: ScannedModule[]): void {
+  for (const { workspace, module } of found) {
+    let ws = config.workspaces.find((w) => w.name === workspace);
+    if (!ws) config.workspaces.push((ws = { name: workspace, modules: [] }));
+    const i = ws.modules.findIndex((m) => m.path === module.path);
+    if (i >= 0) ws.modules[i] = module;
+    else ws.modules.push(module);
+  }
+}
+
+// Repos folder that `dk clone` uses: <clone baseDir>/digicroz-repos. null if clone was never set up.
+export function getReposRoot(): string | null {
+  const base = readCloneConfig()?.clones[0]?.baseDir;
+  if (!base) return null;
+  // "C:" alone is drive-relative in node's path.join, so force the root slash.
+  return join(/^[A-Za-z]:$/.test(base) ? base + '/' : base, 'digicroz-repos');
+}
+
+// Config used by `dk ws`: saved config + modules found via ws.dk.json under the repos root.
+// ponytail: rescans on every run (2 levels deep) and merges in memory only, nothing is written.
+export function loadWorkspaceConfig(): { config: WorkspaceConfig; warning?: string } {
+  const config = workspaceConfigExists()
+    ? readWorkspaceConfig()
+    : { version: '1.0.0', workspaces: [] };
+  const root = getReposRoot();
+  if (!root || !existsSync(root)) return { config };
+  try {
+    mergeScanned(config, scanForRepoConfigs(root));
+    return { config };
+  } catch (e: any) {
+    return { config, warning: e.message };
   }
 }

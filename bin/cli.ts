@@ -33,6 +33,7 @@ import {
   workspaceInit,
   workspaceConfig,
   workspaceList,
+  workspaceScan,
 } from '../src/commands/workspace.js';
 import { clearCloneConfig, clone } from '../src/commands/clone.js';
 // Get package.json version
@@ -335,6 +336,16 @@ async function main() {
     .action(async (...args) => {
       const cmd = createEnhancedCommand('Workspace list', 'Listing workspaces', workspaceList);
       await cmd.execute(...args);
+    });
+
+  workspaceCommand
+    .command('scan [dir]')
+    .description(chalk.gray('🔍 Scan a folder for ws.dk.json files and add them to workspaces'))
+    .action(async (dir?: string) => {
+      const cmd = createEnhancedCommand('Workspace scan', 'Scanning for ws.dk.json', () =>
+        workspaceScan(dir),
+      );
+      await cmd.execute();
     });
 
   // Default workspace action (interactive selector)

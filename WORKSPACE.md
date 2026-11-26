@@ -41,6 +41,25 @@ dk ws
 | `dk workspace config` | `dk ws config` | Open config in VS Code         |
 | `dk workspace list`   | `dk ws list`   | List all workspaces            |
 
+## 🔍 Adding repos with `ws.dk.json` (easiest)
+
+Commit a `ws.dk.json` in each repo once. Everyone on the team then runs:
+
+```bash
+dk ws scan C:/projects   # scans the folder + 2 levels down; defaults to current dir
+```
+
+```json
+{
+  "workspace": "E-Commerce",
+  "name": "Frontend",
+  "isIncludeByDefault": true,
+  "actions": [{ "type": "open-in-vscode" }, { "type": "run-command", "command": "npm install" }]
+}
+```
+
+Only `workspace` is required. `name` defaults to the folder name, `actions` to `open-in-vscode`. The path is whatever location the scan found, so it works on every machine. Re-scanning updates existing modules (matched by path). Scan lists any `run-command`/`run-script` and asks for confirmation before saving.
+
 ## 📝 Configuration Structure
 
 ```json
