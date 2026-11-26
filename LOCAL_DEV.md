@@ -25,7 +25,7 @@ may or may not win over a globally installed `dk`, depending on PATH order, so `
 
 ```bash
 cd C:\digicroz-repos\npm-packages\dev-kit
-npm run build        # or: npx tsup --watch  (in a second terminal)
+npm run build        # or: npm run dev  (in a second terminal)
 dkl ws scan C:/projects
 ```
 

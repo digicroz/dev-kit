@@ -1,4 +1,6 @@
-import { execSync } from 'child_process';
+import { execSync } from 'node:child_process';
+
+import { errorMessage } from '../utils/errors';
 import { ui } from '../utils/ui-helpers.js';
 
 export const dev = async () => {
@@ -13,7 +15,7 @@ export const dev = async () => {
   } catch (error) {
     ui.error(
       'Failed to start development server',
-      error instanceof Error ? error.message : 'Unknown error',
+      error instanceof Error ? errorMessage(error) : 'Unknown error',
     );
     process.exit(1);
   }

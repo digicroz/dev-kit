@@ -1,21 +1,23 @@
-import { exec, execSync } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import inquirer from 'inquirer';
+import { exec, execSync } from 'node:child_process';
+import fs, { existsSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
-import path, { dirname, join } from 'path';
-import { promisify } from 'util';
-import { CloneConfig, osTypes } from '../types/clone';
+import path from 'node:path';
+
+import inquirer from 'inquirer';
+
+import type { CloneConfig, osTypes } from '../types/clone';
 import { getCloneConfigPath, readCloneConfig, writeCloneConfig } from '../utils/clone-config';
+import { errorMessage } from '../utils/errors';
 import { ui } from '../utils/ui-helpers';
-import fs from 'fs';
-const execAsync = promisify(exec);
 
 function getRootDrives(): Promise<string[]> {
   return new Promise((resolve, reject) => {
     exec(
       'powershell -Command "Get-PSDrive -PSProvider FileSystem | ForEach-Object { $_.Name }"',
       (err, stdout) => {
-        if (err) return reject(err);
+        if (err) {
+          return reject(err);
+        }
 
         const drives = stdout
           .split('\n')
@@ -30,7 +32,10 @@ function getRootDrives(): Promise<string[]> {
 // Pick (once) the drive/folder that holds 'digicroz-repos'. Called by `dk ws init`.
 export async function ensureCloneBaseDir(): Promise<string> {
   const config = readCloneConfig();
-  if (config && config.clones.length > 0) return config.clones[0].baseDir;
+  const firstClone = config?.clones[0];
+  if (firstClone) {
+    return firstClone.baseDir;
+  }
   let baseDir: string;
   const osType = os.platform() as osTypes;
   if (osType === 'win32') {
@@ -65,7 +70,7 @@ export async function ensureCloneBaseDir(): Promise<string> {
 async function formatTargetDir(repoUrl: string): Promise<string> {
   const parts = repoUrl.split('/');
   let repoName = parts[parts.length - 1];
-  if (!repoName.includes('--')) {
+  if (!repoName?.includes('--')) {
     ui.error('Invalid repository link. Expected format: project--module');
     process.exit(1);
   }
@@ -73,11 +78,11 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
   repoName = repoName.replace(/--/g, '/');
 
   const config = readCloneConfig();
-  if (!config || config.clones.length === 0) {
+  const baseDir = config?.clones[0]?.baseDir;
+  if (!baseDir) {
     ui.error('Clone directory not set up', "Run 'dk workspace init' first");
     process.exit(1);
   }
-  const baseDir = config.clones[0].baseDir;
 
   return path.join(baseDir, 'digicroz-repos', repoName);
 }
@@ -119,7 +124,7 @@ export const clone = async (reposUrl?: string) => {
   } catch (error) {
     ui.error(
       'Failed to start development server',
-      error instanceof Error ? error.message : 'Unknown error',
+      error instanceof Error ? errorMessage(error) : 'Unknown error',
     );
     process.exit(1);
   }

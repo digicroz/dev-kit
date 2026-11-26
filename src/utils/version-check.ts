@@ -1,8 +1,9 @@
-import { promises as fs } from 'fs';
-import https from 'https';
+import { promises as fs } from 'node:fs';
+import https from 'node:https';
 import os from 'node:os';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { ui } from './ui-helpers.js';
 
 const PACKAGE_NAME = '@digicroz/dev-kit';
@@ -19,9 +20,9 @@ function getCacheFilePath(): string {
   return join(homeDir, CACHE_FILENAME);
 }
 
-interface UpdateCheckCache {
+type UpdateCheckCache = {
   lastCheck?: string;
-}
+};
 
 function isSameCalendarDay(first: Date, second: Date): boolean {
   return (
@@ -54,10 +55,14 @@ async function writeCache(cache: UpdateCheckCache): Promise<void> {
 
 async function hasCheckedToday(): Promise<boolean> {
   const cache = await readCache();
-  if (!cache?.lastCheck) return false;
+  if (!cache?.lastCheck) {
+    return false;
+  }
 
   const lastCheckDate = new Date(cache.lastCheck);
-  if (Number.isNaN(lastCheckDate.getTime())) return false;
+  if (Number.isNaN(lastCheckDate.getTime())) {
+    return false;
+  }
 
   return isSameCalendarDay(lastCheckDate, new Date());
 }
@@ -76,8 +81,12 @@ function isVersionGreater(latest: string, current: string): boolean {
     const latestPart = latestParts[i] || 0;
     const currentPart = currentParts[i] || 0;
 
-    if (latestPart > currentPart) return true;
-    if (latestPart < currentPart) return false;
+    if (latestPart > currentPart) {
+      return true;
+    }
+    if (latestPart < currentPart) {
+      return false;
+    }
   }
 
   return false;

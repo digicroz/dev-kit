@@ -1,11 +1,13 @@
-import { ui } from '../utils/ui-helpers.js';
-import { spawn } from 'child_process';
-import inquirer from 'inquirer';
+import { spawn } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import chalk from 'chalk';
+import inquirer from 'inquirer';
+
 import { readConfig } from '../utils/config.js';
-import { DKProjectType } from '../types/config.js';
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { errorMessage } from '../utils/errors';
+import { ui } from '../utils/ui-helpers.js';
 
 type GitConfigScope = 'local' | 'global' | 'both';
 
@@ -42,7 +44,7 @@ const runGitCommand = (
       resolve({
         success: false,
         output: '',
-        error: error.message,
+        error: errorMessage(error),
       });
     });
   });
@@ -282,11 +284,11 @@ export const gitFix = async () => {
   }
 
   // Ask user what to fix
-  const choices: Array<{
+  const choices: {
     name: string;
     value: GitConfigScope;
     checked?: boolean;
-  }> = [];
+  }[] = [];
 
   if (needsGlobalFix) {
     choices.push({
@@ -314,12 +316,13 @@ export const gitFix = async () => {
 
   let scopesToFix: GitConfigScope[];
 
-  if (choices.length === 1) {
+  const [onlyChoice] = choices;
+  if (choices.length === 1 && onlyChoice) {
     // Only one option available, ask for confirmation
     const { proceed } = await inquirer.prompt({
       type: 'confirm',
       name: 'proceed',
-      message: `Fix ${choices[0].value} git configuration?`,
+      message: `Fix ${onlyChoice.value} git configuration?`,
       default: true,
     });
 
@@ -328,7 +331,7 @@ export const gitFix = async () => {
       return { ok: false, cancelled: true };
     }
 
-    scopesToFix = [choices[0].value];
+    scopesToFix = [onlyChoice.value];
   } else {
     // Multiple options, let user choose
     const { scope } = await inquirer.prompt({
@@ -354,7 +357,9 @@ export const gitFix = async () => {
   const failed: string[] = [];
 
   for (const scope of scopesToFix) {
-    if (scope === 'both') continue; // This is handled by having both global and local in the array
+    if (scope === 'both') {
+      continue;
+    } // This is handled by having both global and local in the array
 
     if (scope === 'local' && !isGitRepo) {
       failed.push(`${scope} (not in git repository)`);
@@ -441,19 +446,25 @@ const resolvePathPatterns = (patterns: string[]): string[] => {
     const suffix = segments.slice(wildcardIndex + 1).join('/');
     const baseFullPath = resolve(process.cwd(), basePath);
 
-    if (!existsSync(baseFullPath)) continue;
+    if (!existsSync(baseFullPath)) {
+      continue;
+    }
 
     try {
       const entries = readdirSync(baseFullPath, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
         const candidatePath = [basePath, entry.name, suffix].filter(Boolean).join('/');
         const fullPath = resolve(process.cwd(), candidatePath);
         if (existsSync(fullPath)) {
           resolved.push(`./${candidatePath}`);
         }
       }
-    } catch {}
+    } catch {
+      /* best-effort: ignore */
+    }
   }
 
   return resolved;
@@ -492,11 +503,11 @@ const ensureS2CIgnoreEntry = (s2cDir: string): { changed: boolean; pattern: stri
   } else if (hasMarker) {
     const markerIndex = updatedLines.map((line) => line.trim()).lastIndexOf(marker);
     updatedLines.splice(markerIndex + 1, 0, pattern);
-    if (updatedLines[updatedLines.length - 1].trim() !== '') {
+    if (updatedLines[updatedLines.length - 1]?.trim() !== '') {
       updatedLines.push('');
     }
   } else {
-    if (updatedLines[updatedLines.length - 1].trim() !== '') {
+    if (updatedLines[updatedLines.length - 1]?.trim() !== '') {
       updatedLines.push('');
     }
     updatedLines.push(marker, pattern, '');
@@ -633,8 +644,8 @@ export const gitAutoCommit = async () => {
   }
 
   // Project-type specific commit logic
-  let candidatePaths: string[] = [];
-  let commitMessage = '';
+  let candidatePaths: string[];
+  let commitMessage: string;
 
   switch (projectType) {
     case 'node-express':

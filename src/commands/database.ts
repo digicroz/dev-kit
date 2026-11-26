@@ -1,11 +1,22 @@
+import { execSync, spawn } from 'node:child_process';
+import {
+  existsSync,
+  readFileSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
+  createReadStream,
+} from 'node:fs';
+import { join } from 'node:path';
+
 import chalk from 'chalk';
-import { readConfig } from '../utils/config.js';
-import { ui } from '../utils/ui-helpers.js';
-import { DKConfig, DatabaseType } from '../types/config.js';
-import { existsSync, readFileSync, mkdirSync, readdirSync, statSync, createReadStream } from 'fs';
-import { join } from 'path';
-import { execSync, spawn } from 'child_process';
 import inquirer from 'inquirer';
+import type { RowDataPacket } from 'mysql2/promise';
+
+import type { DKConfig, DatabaseType } from '../types/config.js';
+import { readConfig } from '../utils/config.js';
+import { errorMessage } from '../utils/errors';
+import { ui } from '../utils/ui-helpers.js';
 
 // Load environment variables from .env file in the current working directory
 function loadEnvFile(rootDir: string = process.cwd()): {
@@ -51,9 +62,9 @@ function loadEnvFile(rootDir: string = process.cwd()): {
     }
 
     return { loaded: true, path: envPath };
-  } catch (error: any) {
+  } catch (error) {
     // Silently fail if we can't read the .env file
-    console.warn(chalk.yellow(`Warning: Could not load .env file: ${error.message}`));
+    console.warn(chalk.yellow(`Warning: Could not load .env file: ${errorMessage(error)}`));
     return { loaded: false };
   }
 }
@@ -118,7 +129,7 @@ export async function dbStatus(): Promise<void> {
 
   // Check available database drivers
   ui.info('Database drivers status', 'All database drivers are bundled with DK CLI');
-  const availableDrivers = await checkAvailableDrivers();
+  await checkAvailableDrivers();
 
   console.log('');
   ui.info('Database Driver Status:', 'Available database connection libraries');
@@ -146,7 +157,10 @@ export async function dbStatus(): Promise<void> {
     return;
   }
 
-  const dbConfig = config.database!;
+  const dbConfig = config.database;
+  if (!dbConfig) {
+    return;
+  }
 
   const statusSpinner = ui.createSpinner('Checking database connection...');
   statusSpinner.start();
@@ -179,7 +193,7 @@ export async function dbStatus(): Promise<void> {
     }
 
     // Attempt to connect to the database
-    const connectionResult = await testDatabaseConnection(dbConfig.dbType!, dbUrl);
+    const connectionResult = await testDatabaseConnection(dbConfig.dbType, dbUrl);
 
     statusSpinner.stop();
 
@@ -260,21 +274,20 @@ export async function dbStatus(): Promise<void> {
         { key: 'URL Format', value: chalk.gray(maskDatabaseUrl(dbUrl)) },
       ]);
     }
-  } catch (error: any) {
+  } catch (error) {
     statusSpinner.stop();
-    ui.error('Database Status Check Failed', error.message || 'An unexpected error occurred');
+    ui.error('Database Status Check Failed', errorMessage(error) || 'An unexpected error occurred');
   }
 }
 
+type ConnectionDetails = { host?: string; port?: number | undefined; path?: string };
+type ConnectionResult = { success: boolean; error?: string; details?: ConnectionDetails };
+
 // Test database connection based on database type
 async function testDatabaseConnection(
-  dbType: DatabaseType,
+  dbType: DatabaseType | undefined,
   dbUrl: string,
-): Promise<{
-  success: boolean;
-  error?: string;
-  details?: { host?: string; port?: number };
-}> {
+): Promise<ConnectionResult> {
   try {
     // Parse the database URL to extract connection details
     const url = new URL(dbUrl);
@@ -295,13 +308,13 @@ async function testDatabaseConnection(
       default:
         return {
           success: false,
-          error: `Unsupported database type: ${dbType}`,
+          error: `Unsupported database type: ${String(dbType)}`,
         };
     }
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      error: `Invalid database URL format: ${error.message}`,
+      error: `Invalid database URL format: ${errorMessage(error)}`,
     };
   }
 }
@@ -309,11 +322,11 @@ async function testDatabaseConnection(
 // MySQL connection test
 async function testMySQLConnection(
   dbUrl: string,
-  details: any,
-): Promise<{ success: boolean; error?: string; details?: any }> {
+  details: ConnectionDetails,
+): Promise<ConnectionResult> {
   try {
     // Try to import mysql2 dynamically
-    const mysql = await import('mysql2/promise' as any).catch(() => null);
+    const mysql = await import('mysql2/promise').catch(() => null);
     if (!mysql) {
       return {
         success: false,
@@ -327,10 +340,10 @@ async function testMySQLConnection(
     await connection.end();
 
     return { success: true, details };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      error: `MySQL connection error: ${error.message}`,
+      error: `MySQL connection error: ${errorMessage(error)}`,
       details,
     };
   }
@@ -339,11 +352,11 @@ async function testMySQLConnection(
 // PostgreSQL connection test
 async function testPostgresConnection(
   dbUrl: string,
-  details: any,
-): Promise<{ success: boolean; error?: string; details?: any }> {
+  details: ConnectionDetails,
+): Promise<ConnectionResult> {
   try {
     // Try to import pg dynamically
-    const { Client } = await import('pg' as any).catch(() => ({
+    const { Client } = await import('pg').catch(() => ({
       Client: null,
     }));
     if (!Client) {
@@ -360,10 +373,10 @@ async function testPostgresConnection(
     await client.end();
 
     return { success: true, details };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      error: `PostgreSQL connection error: ${error.message}`,
+      error: `PostgreSQL connection error: ${errorMessage(error)}`,
       details,
     };
   }
@@ -372,11 +385,11 @@ async function testPostgresConnection(
 // SQLite connection test
 async function testSQLiteConnection(
   dbUrl: string,
-  details: any,
-): Promise<{ success: boolean; error?: string; details?: any }> {
+  details: ConnectionDetails,
+): Promise<ConnectionResult> {
   try {
     // Try to import sqlite3 dynamically
-    const sqlite3 = await import('sqlite3' as any).catch(() => null);
+    const sqlite3 = await import('sqlite3').catch(() => null);
     if (!sqlite3) {
       return {
         success: false,
@@ -388,12 +401,12 @@ async function testSQLiteConnection(
     // Extract file path from URL
     const dbPath = dbUrl.replace('sqlite://', '').replace('sqlite3://', '');
 
-    return new Promise((resolve) => {
-      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err: any) => {
+    return await new Promise((resolve) => {
+      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err: Error | null) => {
         if (err) {
           resolve({
             success: false,
-            error: `SQLite connection error: ${err.message}`,
+            error: `SQLite connection error: ${errorMessage(err)}`,
             details: { ...details, path: dbPath },
           });
         } else {
@@ -405,10 +418,10 @@ async function testSQLiteConnection(
         }
       });
     });
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      error: `SQLite connection error: ${error.message}`,
+      error: `SQLite connection error: ${errorMessage(error)}`,
       details,
     };
   }
@@ -417,11 +430,11 @@ async function testSQLiteConnection(
 // MongoDB connection test
 async function testMongoDBConnection(
   dbUrl: string,
-  details: any,
-): Promise<{ success: boolean; error?: string; details?: any }> {
+  details: ConnectionDetails,
+): Promise<ConnectionResult> {
   try {
     // Try to import mongodb dynamically
-    const { MongoClient } = await import('mongodb' as any).catch(() => ({
+    const { MongoClient } = await import('mongodb').catch(() => ({
       MongoClient: null,
     }));
     if (!MongoClient) {
@@ -438,10 +451,10 @@ async function testMongoDBConnection(
     await client.close();
 
     return { success: true, details };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      error: `MongoDB connection error: ${error.message}`,
+      error: `MongoDB connection error: ${errorMessage(error)}`,
       details,
     };
   }
@@ -460,7 +473,7 @@ function getNextDumpVersion(dumpsDir: string): number {
   for (const file of files) {
     const match = file.match(versionPattern);
     if (match) {
-      const version = parseInt(match[1], 10);
+      const version = parseInt(match[1] ?? '', 10);
       maxVersion = Math.max(maxVersion, version);
     }
   }
@@ -482,7 +495,7 @@ function parseDatabaseUrl(url: string): {
     port: parseInt(urlObj.port) || 3306,
     username: urlObj.username,
     password: urlObj.password,
-    database: urlObj.pathname.slice(1).split('?')[0], // Remove leading slash and query params
+    database: urlObj.pathname.slice(1).split('?')[0] ?? '', // Remove leading slash and query params
   };
 }
 
@@ -501,7 +514,10 @@ export async function dbDumpCreate(): Promise<void> {
     return;
   }
 
-  const dbConfig = config.database!;
+  const dbConfig = config.database;
+  if (!dbConfig) {
+    return;
+  }
 
   // Check if dumpsDir is configured
   if (!dbConfig.dumpsDir) {
@@ -627,10 +643,10 @@ export async function dbDumpCreate(): Promise<void> {
     } else {
       ui.error('Dump file not found', 'The dump command completed but no file was created');
     }
-  } catch (error: any) {
+  } catch (error) {
     ui.error(
       'Database dump failed',
-      `Error creating database dump: ${error.message}\n\nMake sure mysqldump is installed and accessible in your PATH`,
+      `Error creating database dump: ${errorMessage(error)}\n\nMake sure mysqldump is installed and accessible in your PATH`,
     );
   }
 }
@@ -650,7 +666,10 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
     return;
   }
 
-  const dbConfig = config.database!;
+  const dbConfig = config.database;
+  if (!dbConfig) {
+    return;
+  }
 
   // Check if we have the database URL
   if (!dbConfig.dbUrlEnvName) {
@@ -704,7 +723,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         if (match) {
           return {
             filename: file,
-            version: parseInt(match[1]),
+            version: parseInt(match[1] ?? ''),
             timestamp: match[2],
             size: stats.size,
             created: stats.mtime,
@@ -713,8 +732,8 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         }
         return null;
       })
-      .filter(Boolean)
-      .sort((a, b) => b!.version - a!.version); // Sort by version descending
+      .filter((dump) => dump !== null)
+      .sort((a, b) => b.version - a.version); // Sort by version descending
 
     if (dumpFiles.length === 0) {
       ui.error(
@@ -725,16 +744,16 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
     }
 
     // If version is specified, find that specific dump
-    let selectedDump: any = null;
+    let selectedDump: (typeof dumpFiles)[number] | undefined;
 
     if (options.version) {
       const versionNumber = parseInt(options.version.replace(/^v/, ''));
-      selectedDump = dumpFiles.find((dump) => dump!.version === versionNumber);
+      selectedDump = dumpFiles.find((dump) => dump.version === versionNumber);
 
       if (!selectedDump) {
         ui.error(
           'Version not found',
-          `Dump version v${versionNumber} not found.\n\nAvailable versions: ${dumpFiles.map((d) => `v${d!.version}`).join(', ')}`,
+          `Dump version v${versionNumber} not found.\n\nAvailable versions: ${dumpFiles.map((d) => `v${d.version}`).join(', ')}`,
         );
         return;
       }
@@ -746,16 +765,16 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
       ui.info('Available Dumps:', 'Choose a dump to apply');
 
       const choices = dumpFiles.map((dump) => ({
-        name: `v${dump!.version} - ${dump!.timestamp} (${(dump!.size / 1024 / 1024).toFixed(1)}MB)`,
+        name: `v${dump.version} - ${dump.timestamp} (${(dump.size / 1024 / 1024).toFixed(1)}MB)`,
         value: dump,
-        short: `v${dump!.version}`,
+        short: `v${dump.version}`,
       }));
 
       const { selectedDumpChoice } = await inquirer.prompt({
         type: 'list',
         name: 'selectedDumpChoice',
         message: 'Select a dump to apply:',
-        choices: choices,
+        choices,
         default: choices[0]?.value, // Default to latest (first in sorted list)
       });
 
@@ -768,11 +787,11 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
     }
 
     // Check if database has existing tables
-    const mysql = await import('mysql2/promise' as any);
+    const mysql = await import('mysql2/promise');
     const connection = await mysql.createConnection(dbUrl);
 
     try {
-      const [tables] = (await connection.execute('SHOW TABLES')) as any[];
+      const [tables] = await connection.execute<RowDataPacket[]>('SHOW TABLES');
 
       if (tables.length > 0) {
         ui.error(
@@ -782,7 +801,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
 
         console.log('');
         ui.info('Existing Tables:', 'Tables that will be affected');
-        const tableNames = tables.map((row: any) => Object.values(row)[0] as string);
+        const tableNames = tables.map((row) => Object.values(row)[0] as string);
         console.log(chalk.yellow(tableNames.map((name: string) => `• ${name}`).join('\n')));
 
         const { shouldDropTables } = await inquirer.prompt({
@@ -814,11 +833,11 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
           await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
           dropSpinner.stop();
           ui.confirmBox('✅ All tables dropped successfully', 'success');
-        } catch (error: any) {
+        } catch (error) {
           dropSpinner.stop();
           ui.error(
             'Failed to drop tables',
-            `Error: ${error.message}\n\nYou may need higher database privileges to drop tables.`,
+            `Error: ${errorMessage(error)}\n\nYou may need higher database privileges to drop tables.`,
           );
           await connection.end();
           return;
@@ -826,9 +845,9 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
       }
 
       await connection.end();
-    } catch (error: any) {
+    } catch (error) {
       await connection.end();
-      ui.error('Database connection failed', `Error: ${error.message}`);
+      ui.error('Database connection failed', `Error: ${errorMessage(error)}`);
       return;
     }
 
@@ -874,7 +893,6 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         const fileStream = createReadStream(selectedDump.fullPath);
 
         // Simple status updates without misleading progress percentage
-        let statusUpdateInterval: NodeJS.Timeout;
         let dots = 0;
 
         const updateStatus = () => {
@@ -884,7 +902,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         };
 
         // Update status every 2 seconds to show activity
-        statusUpdateInterval = setInterval(updateStatus, 2000);
+        const statusUpdateInterval = setInterval(updateStatus, 2000);
 
         // Pipe file to mysql process
         fileStream.pipe(mysqlProcess.stdin);
@@ -915,7 +933,7 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         // Handle process errors
         mysqlProcess.on('error', (error) => {
           clearInterval(statusUpdateInterval);
-          reject(new Error(`Failed to start mysql process: ${error.message}`));
+          reject(new Error(`Failed to start mysql process: ${errorMessage(error)}`));
         });
 
         // Set timeout (15 minutes)
@@ -945,15 +963,15 @@ export async function dbDumpApply(options: { version?: string } = {}): Promise<v
         { key: 'Status', value: chalk.green('Successfully imported') },
         { key: 'Timestamp', value: chalk.gray(new Date().toLocaleString()) },
       ]);
-    } catch (error: any) {
+    } catch (error) {
       applySpinner.stop();
       ui.error(
         'Dump import failed',
-        `Error applying database dump: ${error.message}\n\nMake sure mysql client is installed and accessible in your PATH`,
+        `Error applying database dump: ${errorMessage(error)}\n\nMake sure mysql client is installed and accessible in your PATH`,
       );
     }
-  } catch (error: any) {
-    ui.error('Dump apply operation failed', `Error: ${error.message}`);
+  } catch (error) {
+    ui.error('Dump apply operation failed', `Error: ${errorMessage(error)}`);
   }
 }
 
@@ -972,7 +990,10 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
     return;
   }
 
-  const dbConfig = config.database!;
+  const dbConfig = config.database;
+  if (!dbConfig) {
+    return;
+  }
 
   // Check if we have the database URL
   if (!dbConfig.dbUrlEnvName) {
@@ -1060,7 +1081,7 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
     dropSpinner.start();
 
     // Connect to MySQL and execute the drop tables script
-    const mysql = await import('mysql2/promise' as any);
+    const mysql = await import('mysql2/promise');
     const connection = await mysql.createConnection(dbUrl);
 
     try {
@@ -1068,7 +1089,7 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
       await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
 
       // Get all table names
-      const [tables] = (await connection.execute(`SHOW TABLES`)) as any[];
+      const [tables] = await connection.execute<RowDataPacket[]>(`SHOW TABLES`);
 
       let droppedCount = 0;
       const failedTables: string[] = [];
@@ -1079,9 +1100,9 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
         try {
           await connection.execute(`DROP TABLE IF EXISTS \`${tableName}\``);
           droppedCount++;
-        } catch (error: any) {
+        } catch (error) {
           failedTables.push(tableName);
-          console.warn(`⚠️  Could not drop table '${tableName}': ${error.message}`);
+          console.warn(`⚠️  Could not drop table '${tableName}': ${errorMessage(error)}`);
         }
       }
 
@@ -1089,7 +1110,7 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
       await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
 
       // Check final results
-      const [remainingTables] = (await connection.execute('SHOW TABLES')) as any[];
+      const [remainingTables] = await connection.execute<RowDataPacket[]>('SHOW TABLES');
       const remainingCount = remainingTables.length;
 
       await connection.end();
@@ -1143,14 +1164,14 @@ export async function dbDropAllTables(options: { force?: boolean } = {}): Promis
           "• Use 'dk db dump create' to backup before making changes",
         'info',
       );
-    } catch (dbError: any) {
+    } catch (dbError) {
       await connection.end();
       throw dbError;
     }
-  } catch (error: any) {
+  } catch (error) {
     ui.error(
       'Drop tables operation failed',
-      `Error dropping tables: ${error.message}\n\nPlease check your database connection and permissions`,
+      `Error dropping tables: ${errorMessage(error)}\n\nPlease check your database connection and permissions`,
     );
   }
 }
@@ -1163,7 +1184,7 @@ function maskDatabaseUrl(url: string): string {
       urlObj.password = '***';
     }
     if (urlObj.username) {
-      urlObj.username = urlObj.username.slice(0, 2) + '***';
+      urlObj.username = `${urlObj.username.slice(0, 2)}***`;
     }
     return urlObj.toString();
   } catch {

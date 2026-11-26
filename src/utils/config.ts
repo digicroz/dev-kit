@@ -1,14 +1,11 @@
-import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
-  DKConfig,
-  DKProjectType,
+  type DKConfig,
+  type DKProjectType,
+  type DatabaseConfig,
   DK_CONFIG_LATEST_VERSION,
-  DatabaseConfig,
-  DatabaseType,
-  SpringBootConfig,
-  GeneratorsConfig,
-  AssetsTypeGeneratorConfig,
 } from '../types/config';
 
 const CONFIG_FILE = 'dk.config.json';
@@ -22,14 +19,18 @@ export function configExists(rootDir: string = process.cwd()): boolean {
 }
 
 export function readConfig(rootDir: string = process.cwd()): DKConfig | null {
-  if (!configExists(rootDir)) return null;
+  if (!configExists(rootDir)) {
+    return null;
+  }
   const raw = readFileSync(getConfigPath(rootDir), 'utf8');
   const config = JSON.parse(raw);
   return migrateConfigIfNeeded(config);
 }
 
 export function getConfigVersion(config: DKConfig | null): number {
-  if (!config || typeof config.version !== 'number') return 0;
+  if (!config || typeof config.version !== 'number') {
+    return 0;
+  }
   return config.version;
 }
 
@@ -45,7 +46,7 @@ export function writeConfig(
     version: DK_CONFIG_LATEST_VERSION,
     ...config,
   };
-  writeFileSync(getConfigPath(rootDir), JSON.stringify(toWrite, null, 2) + '\n', 'utf8');
+  writeFileSync(getConfigPath(rootDir), `${JSON.stringify(toWrite, null, 2)}\n`, 'utf8');
 }
 
 // Heuristic project type detection
@@ -64,18 +65,38 @@ export function detectProjectType(rootDir: string = process.cwd()): DKProjectTyp
     }
 
     const pkgPath = join(rootDir, 'package.json');
-    if (!existsSync(pkgPath)) return null;
+    if (!existsSync(pkgPath)) {
+      return null;
+    }
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    if (deps['@tanstack/react-start'] || deps['@tanstack/start']) return 'tanstack-start';
-    if (deps['next']) return 'nextjs';
-    if (deps['@angular/core']) return 'angular';
-    if (deps['express']) return 'node-express';
-    if (deps['fastify']) return 'node-fastify';
-    if (deps['vite'] && deps['react']) return 'vite-react';
-    if (deps['react-native']) return 'react-native-cli';
-    if (deps['tsup']) return 'npm-package';
-  } catch {}
+    if (deps['@tanstack/react-start'] || deps['@tanstack/start']) {
+      return 'tanstack-start';
+    }
+    if (deps['next']) {
+      return 'nextjs';
+    }
+    if (deps['@angular/core']) {
+      return 'angular';
+    }
+    if (deps['express']) {
+      return 'node-express';
+    }
+    if (deps['fastify']) {
+      return 'node-fastify';
+    }
+    if (deps['vite'] && deps['react']) {
+      return 'vite-react';
+    }
+    if (deps['react-native']) {
+      return 'react-native-cli';
+    }
+    if (deps['tsup']) {
+      return 'npm-package';
+    }
+  } catch {
+    /* best-effort: ignore */
+  }
   return null;
 }
 
@@ -101,7 +122,9 @@ function detectSpringBootProject(rootDir: string): boolean {
 
     // Consider it a Spring Boot microservice project if we have 2+ services
     // or if we have typical microservice directory names
-    if (serviceDirectories.length >= 2) return true;
+    if (serviceDirectories.length >= 2) {
+      return true;
+    }
 
     const microservicePatterns = [
       /.*service.*/,
@@ -157,7 +180,7 @@ export function detectDatabaseConfig(rootDir: string = process.cwd()): DatabaseC
     }
 
     return Object.keys(config).length > 0 ? config : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -169,10 +192,14 @@ function parseEnvForDatabase(envContent: string): Partial<DatabaseConfig> | null
 
   for (const line of lines) {
     const trimmedLine = line.trim();
-    if (!trimmedLine || trimmedLine.startsWith('#')) continue;
+    if (!trimmedLine || trimmedLine.startsWith('#')) {
+      continue;
+    }
 
     const [key, value] = trimmedLine.split('=', 2);
-    if (!key || !value) continue;
+    if (!key || !value) {
+      continue;
+    }
 
     // Look for database URL patterns
     if (key.includes('DATABASE_URL') && value.includes('://')) {
@@ -200,7 +227,7 @@ function parseEnvForDatabase(envContent: string): Partial<DatabaseConfig> | null
             config.dbName = dbName;
           }
         }
-      } catch (error) {
+      } catch {
         // If URL parsing fails, we'll ask the user later
       }
     }
@@ -221,7 +248,7 @@ export function migrateConfigIfNeeded(config: DKConfig): DKConfig {
   const oldAssets = config.assetsTypeGenerator;
   const imagesDir = oldAssets.imagesDir;
 
-  const baseDir = imagesDir.split('/')[0];
+  const baseDir = imagesDir.split('/')[0] ?? '';
   const imageBaseDir = imagesDir.substring(baseDir.length + 1) || 'images';
 
   const newConfig: DKConfig = {

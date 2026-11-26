@@ -1,7 +1,7 @@
 // Main entry point for the advanced development kit
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 export * from './commands/clone';
 export * from './commands/clean';
 export * from './commands/git';
@@ -18,7 +18,7 @@ function getVersionFromPackageJson(): string {
     const packageJsonPath = join(__dirname, '..', 'package.json');
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
     return packageJson.version;
-  } catch (error) {
+  } catch {
     console.warn('Could not read version from package.json, falling back to default');
     return '1.0.0';
   }

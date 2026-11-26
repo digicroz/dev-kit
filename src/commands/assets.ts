@@ -1,15 +1,17 @@
-import { ui } from '../utils/ui-helpers.js';
-import { readConfig } from '../utils/config.js';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { existsSync } from 'fs';
+import { promises as fs, existsSync } from 'node:fs';
+import path from 'node:path';
+
 import sizeOf from 'image-size';
+
+import { readConfig } from '../utils/config.js';
+import { errorMessage } from '../utils/errors';
+import { ui } from '../utils/ui-helpers.js';
 
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg', '.avif']);
 
 function toCamel(str: string): string {
   return str
-    .replace(/[_\s\-\.]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
+    .replace(/[_\s.-]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
     .replace(/^[A-Z]/, (m) => m.toLowerCase())
     .replace(/[^a-zA-Z0-9]/g, '');
 }
@@ -17,9 +19,9 @@ function toCamel(str: string): string {
 function toKebabCase(str: string): string {
   return str
     .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .replace(/[\s_\.]+/g, '-')
+    .replace(/[\s_.]+/g, '-')
     .toLowerCase()
-    .replace(/[^a-z0-9\-]/g, '')
+    .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }
@@ -27,7 +29,7 @@ function toKebabCase(str: string): string {
 function toSnakeCase(str: string): string {
   return str
     .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/[\s\-\.]+/g, '_')
+    .replace(/[\s.-]+/g, '_')
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, '')
     .replace(/_+/g, '_')
@@ -59,7 +61,9 @@ function toValidIdentifier(str: string): string {
 function ensureUnique(name: string, used: Set<string>): string {
   let n = name;
   let i = 2;
-  while (used.has(n)) n = `${name}${i++}`;
+  while (used.has(n)) {
+    n = `${name}${i++}`;
+  }
   used.add(n);
   return n;
 }
@@ -81,30 +85,48 @@ async function walk(dir: string): Promise<string[]> {
   return files;
 }
 
-function setInTree(tree: any, pathParts: string[], leafValue: string): void {
+type Tree = { [key: string]: Tree | string };
+
+function setInTree(tree: Tree, pathParts: string[], leafValue: string): void {
   let node = tree;
   for (let i = 0; i < pathParts.length - 1; i++) {
     const part = pathParts[i];
-    if (!node[part]) node[part] = {};
-    node = node[part];
+    if (part === undefined) {
+      continue;
+    }
+    let next = node[part];
+    if (!next) {
+      next = {};
+      node[part] = next;
+    }
+    if (typeof next === 'string') {
+      throw new Error(`Asset key collision at "${part}"`);
+    }
+    node = next;
   }
-  node[pathParts[pathParts.length - 1]] = leafValue;
+  const leaf = pathParts[pathParts.length - 1];
+  if (leaf !== undefined) {
+    node[leaf] = leafValue;
+  }
 }
 
-function sortObjectKeysDeep(obj: any): any {
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    const sorted: any = {};
+function sortObjectKeysDeep(obj: Tree | string): Tree | string {
+  if (obj && typeof obj === 'object') {
+    const sorted: Tree = {};
     for (const key of Object.keys(obj).sort()) {
-      sorted[key] = sortObjectKeysDeep(obj[key]);
+      const value = obj[key];
+      if (value !== undefined) {
+        sorted[key] = sortObjectKeysDeep(value);
+      }
     }
     return sorted;
   }
   return obj;
 }
 
-function objectToTS(obj: any, indent = 0): string {
+function objectToTS(obj: Tree | string, indent = 0): string {
   const pad = '  '.repeat(indent);
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+  if (obj && typeof obj === 'object') {
     const entries = Object.entries(obj).map(([k, v]) => {
       const key = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(k) ? k : JSON.stringify(k);
       return `${'  '.repeat(indent + 1)}${key}: ${objectToTS(v, indent + 1)}`;
@@ -185,7 +207,7 @@ export const generateImageIndex = async (): Promise<void> => {
   }
 
   const assetsConfig = config.generators.assets;
-  const imageConfig = assetsConfig.image!;
+  const imageConfig = config.generators.assets.image;
   const imageNameCase = imageConfig.nameCase || 'kebab-case';
 
   const baseDirPath = path.resolve(path.join(assetsConfig.baseDir, imageConfig.baseDir));
@@ -235,7 +257,7 @@ export const generateImageIndex = async (): Promise<void> => {
 
     const publicFileNames = new Set(
       publicFiles.map((f) => {
-        const relPath = path.relative(publicDirPath!, f);
+        const relPath = path.relative(publicDirPath ?? '', f);
         return path.posix.normalize(relPath.split(path.sep).join(path.posix.sep));
       }),
     );
@@ -256,7 +278,7 @@ export const generateImageIndex = async (): Promise<void> => {
     const usedVarNames = new Set<string>();
     const imports: string[] = [];
     const typeImports: string[] = [];
-    const tree: any = {};
+    const tree: Tree = {};
 
     if (config.projectType === 'nextjs' && publicFiles.length > 0) {
       typeImports.push(`import type { StaticImageData } from "next/image";`);
@@ -311,7 +333,7 @@ export const generateImageIndex = async (): Promise<void> => {
 
         const imageBuffer = await fs.readFile(abs);
         const dimensions = sizeOf(imageBuffer);
-        const publicPathParts = assetsConfig.publicDir!.split(path.sep);
+        const publicPathParts = (assetsConfig.publicDir ?? '').split(path.sep);
         const lastPart = publicPathParts[publicPathParts.length - 1];
         const staticPath = `/${lastPart}/${imageConfig.baseDir}/${relFromImages}`;
 
@@ -355,8 +377,7 @@ export const generateImageIndex = async (): Promise<void> => {
       body = `export const ImageAssets = ${objectToTS(sortedTree)};\n`;
     } else {
       const allImports = [...typeImports, ...imports.sort()].join('\n');
-      body =
-        `${allImports}\n\n` + `export const ImageAssets = ${objectToTS(sortedTree)} as const;\n`;
+      body = `${allImports}\n\nexport const ImageAssets = ${objectToTS(sortedTree)} as const;\n`;
     }
 
     await fs.writeFile(outputFile, header + body, 'utf8');
@@ -407,7 +428,7 @@ export const generateImageIndex = async (): Promise<void> => {
     spinner.fail('Failed to generate image index');
     ui.error(
       'Error generating image index',
-      error instanceof Error ? error.message : 'Unknown error',
+      error instanceof Error ? errorMessage(error) : 'Unknown error',
     );
     process.exit(1);
   }

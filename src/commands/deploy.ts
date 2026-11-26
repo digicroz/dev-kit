@@ -1,31 +1,33 @@
-import { execSync, spawn } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import { execSync, spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ui } from '../utils/ui-helpers.js';
-import { readConfig } from '../utils/config.js';
 
-interface DeployInfo {
+import { readConfig } from '../utils/config.js';
+import { ui } from '../utils/ui-helpers.js';
+
+type DeployInfo = {
   last_deploy: string;
   hash: string;
   version: string;
-}
+};
 
-interface PackageJson {
+type PackageJson = {
   name?: string;
   version?: string;
   [key: string]: unknown;
-}
+};
 
-interface DkConfig {
+type DkConfig = {
   deploy?: {
     uat?: string | string[];
     prod?: string | string[];
     [key: string]: unknown;
   };
   [key: string]: unknown;
-}
+};
 
 /**
  * Display error message and exit
@@ -46,7 +48,7 @@ function executeCommand(command: string, errorMessage: string): string {
   try {
     return execSync(command, { encoding: 'utf8', stdio: 'pipe' }).toString().trim();
   } catch (error) {
-    displayError(`${errorMessage}: ${error}`);
+    displayError(`${errorMessage}: ${String(error)}`);
   }
 }
 
@@ -69,7 +71,7 @@ function readPackageJson(): PackageJson {
   try {
     const content = fs.readFileSync(packagePath, 'utf8');
     return JSON.parse(content) as PackageJson;
-  } catch (error) {
+  } catch {
     displayError('Failed to read or parse package.json.');
   }
 }
@@ -80,8 +82,8 @@ function readPackageJson(): PackageJson {
 function writePackageJson(packageData: PackageJson): void {
   const packagePath = getPackageJsonPath();
   try {
-    fs.writeFileSync(packagePath, JSON.stringify(packageData, null, 2) + '\n');
-  } catch (error) {
+    fs.writeFileSync(packagePath, `${JSON.stringify(packageData, null, 2)}\n`);
+  } catch {
     displayError('Failed to write package.json.');
   }
 }
@@ -98,7 +100,7 @@ function readDeployInfo(): DeployInfo | null {
   try {
     const content = fs.readFileSync(deployPath, 'utf8');
     return JSON.parse(content);
-  } catch (error) {
+  } catch {
     console.warn(
       chalk.yellow('Warning: Failed to read deploy.json, treating as first deployment.'),
     );
@@ -111,12 +113,14 @@ function readDeployInfo(): DeployInfo | null {
  */
 function readDkConfig(): DkConfig | null {
   const cfgPath = path.join(process.cwd(), 'dk.config.json');
-  if (!fs.existsSync(cfgPath)) return null;
+  if (!fs.existsSync(cfgPath)) {
+    return null;
+  }
 
   try {
     const content = fs.readFileSync(cfgPath, 'utf8');
     return JSON.parse(content) as DkConfig;
-  } catch (error) {
+  } catch {
     console.warn(chalk.yellow('Warning: Failed to read dk.config.json, ignoring.'));
     return null;
   }
@@ -213,7 +217,7 @@ function runCustomCommands(commands: string | string[], envName: string) {
     try {
       execSync(cmd, { stdio: 'inherit' });
     } catch (error) {
-      displayError(`Custom command failed (${cmd}): ${error}`);
+      displayError(`Custom command failed (${cmd}): ${String(error)}`);
     }
   }
 }
@@ -224,8 +228,8 @@ function runCustomCommands(commands: string | string[], envName: string) {
 function writeDeployInfo(deployInfo: DeployInfo): void {
   const deployPath = path.join(process.cwd(), 'deploy.json');
   try {
-    fs.writeFileSync(deployPath, JSON.stringify(deployInfo, null, 2) + '\n');
-  } catch (error) {
+    fs.writeFileSync(deployPath, `${JSON.stringify(deployInfo, null, 2)}\n`);
+  } catch {
     displayError('Failed to write deploy.json.');
   }
 }
@@ -244,7 +248,7 @@ function incrementVersion(version: string): string {
     displayError('Invalid version format. All parts must be numbers.');
   }
 
-  return `${major}.${minor}.${patch + 1}`;
+  return `${major}.${minor}.${(patch ?? 0) + 1}`;
 }
 
 /**
@@ -254,7 +258,7 @@ function hasUncommittedChanges(): boolean {
   try {
     const result = execSync('git status --porcelain', { encoding: 'utf8' });
     return result.trim().length > 0;
-  } catch (error) {
+  } catch {
     displayError('Failed to check git status.');
   }
 }
@@ -269,7 +273,7 @@ function checkRemoteBranchExists(branchName: string): boolean {
       stdio: 'pipe',
     });
     return result.trim().length > 0;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -280,7 +284,7 @@ function checkRemoteBranchExists(branchName: string): boolean {
 function getCurrentBranch(): string {
   try {
     return execSync('git branch --show-current', { encoding: 'utf8' }).trim();
-  } catch (error) {
+  } catch {
     displayError('Failed to get current git branch.');
   }
 }
@@ -304,7 +308,7 @@ function createAndPublishBranch(branchName: string): void {
 
     ui.success(`✅ ${branchName} branch created and published successfully!`);
   } catch (error) {
-    displayError(`Failed to create and publish ${branchName} branch: ${error}`);
+    displayError(`Failed to create and publish ${branchName} branch: ${String(error)}`);
   }
 }
 
@@ -360,7 +364,7 @@ export const deployUat = async () => {
 
     executeCommand('git push origin main:uat --force', 'Failed to push to uat branch');
     console.log(chalk.green('✅ Successfully deployed to development environment!'));
-  } catch (error) {
+  } catch {
     displayError('Deployment to uat failed.');
   }
 };
@@ -441,7 +445,7 @@ export const deployProd = async () => {
   }
 
   // Get current date and time
-  const datetime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const datetime = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
   // Store deployment information
   const newDeployInfo: DeployInfo = {
@@ -474,7 +478,7 @@ export const deployProd = async () => {
     );
     executeCommand('gh pr view --web', 'Failed to open pull request in browser');
     console.log(chalk.green('✅ Pull request created successfully!'));
-  } catch (error) {
+  } catch {
     console.warn(
       chalk.yellow(
         '⚠️  Pull request creation failed. Make sure GitHub CLI is installed and authenticated.',

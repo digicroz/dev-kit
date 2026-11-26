@@ -1,14 +1,8 @@
+import { promises as fs, existsSync } from 'node:fs';
+import path from 'node:path';
+
 import inquirer from 'inquirer';
-import { ui } from '../utils/ui-helpers';
-import {
-  configExists,
-  writeConfig,
-  detectProjectType,
-  detectDatabaseConfig,
-} from '../utils/config';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { existsSync } from 'fs';
+
 import type {
   DKProjectType,
   DatabaseConfig,
@@ -16,6 +10,14 @@ import type {
   SpringBootConfig,
   GeneratorsConfig,
 } from '../types/config';
+import {
+  configExists,
+  writeConfig,
+  detectProjectType,
+  detectDatabaseConfig,
+} from '../utils/config';
+import { errorMessage } from '../utils/errors';
+import { ui } from '../utils/ui-helpers';
 
 const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
   { name: 'Node.js (Express)', value: 'node-express' },
@@ -39,13 +41,15 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
     await fs.mkdir(vscodeDir, { recursive: true });
   }
 
-  let settings: any = {};
+  let settings: { 'files.readonlyInclude'?: Record<string, boolean>; [key: string]: unknown } = {};
 
   if (existsSync(settingsPath)) {
     try {
       const settingsContent = await fs.readFile(settingsPath, 'utf8');
       settings = JSON.parse(settingsContent);
-    } catch (error) {}
+    } catch {
+      /* best-effort: ignore */
+    }
   }
 
   if (!settings['files.readonlyInclude']) {
@@ -73,7 +77,7 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
     }
   }
 
-  await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
+  await fs.writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
 }
 
 export async function init() {
@@ -134,7 +138,7 @@ export async function init() {
     try {
       await createInitialVSCodeSettings(generatorsConfig);
       ui.info('VS Code settings configured with readonly includes');
-    } catch (error) {
+    } catch {
       ui.warning('Failed to create VS Code settings', 'You can configure them manually');
     }
 
@@ -155,8 +159,8 @@ export async function init() {
 
 async function detectAndConfigureSpringBootServices(): Promise<SpringBootConfig | undefined> {
   try {
-    const fs = await import('fs');
-    const path = await import('path');
+    const fs = await import('node:fs');
+    const path = await import('node:path');
 
     // Look for common Spring Boot microservice structure
     const currentDir = process.cwd();
@@ -202,6 +206,9 @@ async function detectAndConfigureSpringBootServices(): Promise<SpringBootConfig 
 
     for (let i = 0; i < potentialServices.length; i++) {
       const serviceName = potentialServices[i];
+      if (!serviceName) {
+        continue;
+      }
 
       const { includeService } = await inquirer.prompt({
         type: 'confirm',
@@ -236,8 +243,8 @@ async function detectAndConfigureSpringBootServices(): Promise<SpringBootConfig 
     services.sort((a, b) => a.startingOrderIndex - b.startingOrderIndex);
 
     return { services };
-  } catch (error: any) {
-    ui.warning('Failed to detect Spring Boot services:', error?.message || String(error));
+  } catch (error) {
+    ui.warning('Failed to detect Spring Boot services:', errorMessage(error));
     return undefined;
   }
 }
@@ -299,7 +306,7 @@ async function configureGenerators(
     return undefined;
   }
 
-  const fs = await import('fs');
+  const fs = await import('node:fs');
   const srcAssetsImages = 'src/assets/images';
   const srcAssetsImagesExists = fs.existsSync(srcAssetsImages);
 
@@ -324,6 +331,8 @@ async function configureGenerators(
         defaultBaseDir = 'app/assets';
         defaultImageDir = 'images';
         defaultPublicDir = 'public/assets';
+        break;
+      default:
         break;
     }
   }
@@ -384,7 +393,7 @@ async function configureGenerators(
     default: false,
   });
 
-  let svgConfig = undefined;
+  let svgConfig;
 
   if (configureSvg) {
     const { svgDir } = await inquirer.prompt({
@@ -430,7 +439,7 @@ async function configureGenerators(
     };
   }
 
-  let publicDir = undefined;
+  let publicDir;
 
   if (projectType === 'nextjs') {
     const { configurePublicDir } = await inquirer.prompt({
@@ -464,7 +473,7 @@ async function configureGenerators(
       image: {
         baseDir: imageDir.trim(),
         nameCase: imageNameCase,
-        infoComment: infoComment,
+        infoComment,
       },
       ...(svgConfig && { svg: svgConfig }),
     },

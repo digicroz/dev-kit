@@ -1,18 +1,20 @@
+import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import chalk from 'chalk';
-import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+
 import { ui } from '../utils/ui-helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-interface HealthCheck {
+type HealthCheck = {
   name: string;
   status: 'pass' | 'fail' | 'warn';
   message: string;
-}
+};
 
 export async function doctor(): Promise<void> {
   ui.section('🩺 DK Health Diagnostics', 'Comprehensive system and configuration check');
@@ -41,7 +43,7 @@ export async function doctor(): Promise<void> {
         message: 'DK package files not found',
       });
     }
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'DK Installation',
       status: 'fail',
@@ -52,7 +54,7 @@ export async function doctor(): Promise<void> {
   // Check Node.js version compatibility
   try {
     const nodeVersion = process.version;
-    const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
+    const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0] ?? '');
 
     if (majorVersion >= 18) {
       checks.push({
@@ -73,7 +75,7 @@ export async function doctor(): Promise<void> {
         message: `Node.js ${nodeVersion} is too old (minimum v16 required)`,
       });
     }
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'Node.js Compatibility',
       status: 'fail',
@@ -90,7 +92,7 @@ export async function doctor(): Promise<void> {
       status: 'pass',
       message: `npm v${npmVersion} is available`,
     });
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'npm Availability',
       status: 'fail',
@@ -107,7 +109,7 @@ export async function doctor(): Promise<void> {
       status: 'pass',
       message: `${gitVersion} is available`,
     });
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'Git for Deploy Commands',
       status: 'warn',
@@ -127,7 +129,7 @@ export async function doctor(): Promise<void> {
         status: 'pass',
         message: `Working in project: ${projectPkg.name || 'unnamed project'}`,
       });
-    } catch (error) {
+    } catch {
       checks.push({
         name: 'Current Project',
         status: 'warn',
@@ -150,7 +152,7 @@ export async function doctor(): Promise<void> {
       status: 'pass',
       message: 'Current directory is a git repository (deploy commands available)',
     });
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'Git Repository Status',
       status: 'warn',
@@ -183,7 +185,7 @@ export async function doctor(): Promise<void> {
           .join(', ')}`,
       });
     }
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'DK Commands',
       status: 'fail',
@@ -218,15 +220,21 @@ export async function doctor(): Promise<void> {
     console.log(`    ${colors[check.status](check.message)}`);
     console.log('');
 
-    if (check.status === 'fail') hasErrors = true;
-    if (check.status === 'warn') hasWarnings = true;
-    if (check.status === 'pass') passCount++;
+    if (check.status === 'fail') {
+      hasErrors = true;
+    }
+    if (check.status === 'warn') {
+      hasWarnings = true;
+    }
+    if (check.status === 'pass') {
+      passCount++;
+    }
   });
 
   // Beautiful summary with progress visualization
   ui.section('📊 Health Summary', 'Overall system status and recommendations');
 
-  console.log('Health Score: ' + ui.progressBar(passCount, checks.length, 25));
+  console.log(`Health Score: ${ui.progressBar(passCount, checks.length, 25)}`);
   console.log('');
 
   ui.table([

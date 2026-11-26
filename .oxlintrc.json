@@ -1,0 +1,133 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "node"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "env": {
+    "builtin": true,
+    "node": true,
+    "es2024": true
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "rules": {
+    "no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^_",
+        "args": "after-used",
+        "argsIgnorePattern": "^_",
+        "caughtErrors": "all",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
+
+    "eqeqeq": ["error", "always"],
+    "curly": ["error", "all"],
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-duplicate-imports": "error",
+    "no-constant-binary-expression": "error",
+    "no-unreachable": "error",
+    "no-useless-assignment": "error",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/prefer-optional-catch-binding": "warn",
+    "unicorn/error-message": "warn",
+
+    // Anti-slop: dead code, leftovers and noise that AI-generated code tends to leave behind.
+    "no-debugger": "error",
+    "no-alert": "error",
+    "no-empty": ["error", { "allowEmptyCatch": false }],
+    "no-empty-function": "error",
+    "no-useless-return": "error",
+    "no-useless-catch": "error",
+    "no-useless-concat": "error",
+    "no-useless-constructor": "error",
+    "no-lonely-if": "error",
+    "no-else-return": "error",
+    "no-nested-ternary": "error",
+    "no-unneeded-ternary": "error",
+    "no-extra-boolean-cast": "error",
+    "no-param-reassign": "warn",
+    "no-warning-comments": ["warn", { "terms": ["fixme", "xxx", "hack"], "location": "start" }],
+    "prefer-template": "warn",
+    "object-shorthand": "warn",
+    "no-implicit-coercion": "warn",
+    "no-throw-literal": "error",
+    "no-eval": "error",
+    "no-new-func": "error",
+    "no-return-assign": "error",
+    "no-sequences": "error",
+    "no-lone-blocks": "error",
+    "unicorn/no-useless-undefined": "warn",
+    "unicorn/no-useless-spread": "warn",
+    "unicorn/no-useless-fallback-in-spread": "warn",
+    "unicorn/no-useless-length-check": "warn",
+    "unicorn/no-instanceof-array": "error",
+    "unicorn/no-new-array": "error",
+    "unicorn/prefer-includes": "error",
+    "unicorn/prefer-string-slice": "warn",
+    "unicorn/throw-new-error": "error",
+    "unicorn/no-await-in-promise-methods": "error",
+    "unicorn/no-thenable": "error",
+    "import/no-cycle": "warn",
+    "import/no-self-import": "error",
+    "import/no-duplicates": "error",
+    "import/first": "error",
+
+    // Complexity ceilings: warn so oversized functions get split instead of growing forever.
+    "complexity": ["warn", 25],
+    "max-depth": ["warn", 5],
+    "max-params": ["warn", 5],
+    "max-nested-callbacks": ["warn", 4],
+
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-expect-error": "allow-with-description", "minimumDescriptionLength": 10 }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "typescript/no-extra-non-null-assertion": "error",
+    "typescript/no-empty-object-type": "error",
+    "typescript/no-namespace": "error",
+    "typescript/no-require-imports": "error",
+    "typescript/no-this-alias": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-wrapper-object-types": "error",
+    "typescript/no-inferrable-types": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-unnecessary-type-assertion": "warn",
+    "typescript/no-unnecessary-condition": "warn",
+    "typescript/no-duplicate-enum-values": "error",
+    "typescript/no-duplicate-type-constituents": "error",
+    "typescript/no-redundant-type-constituents": "error",
+    "typescript/no-confusing-non-null-assertion": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/return-await": ["error", "always"],
+    "typescript/only-throw-error": "error",
+    "typescript/prefer-promise-reject-errors": "error",
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      { "considerDefaultExhaustiveForUnions": true }
+    ],
+    "typescript/prefer-as-const": "error",
+    "typescript/prefer-function-type": "error",
+    "typescript/prefer-includes": "error",
+    "typescript/prefer-nullish-coalescing": "warn",
+    "typescript/prefer-optional-chain": "warn",
+    "typescript/prefer-for-of": "warn",
+    "typescript/array-type": "error",
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "typescript/consistent-type-imports": ["error", { "prefer": "type-imports" }],
+    "typescript/consistent-type-assertions": "error",
+    "typescript/adjacent-overload-signatures": "error"
+  }
+}

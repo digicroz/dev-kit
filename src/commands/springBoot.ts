@@ -1,10 +1,13 @@
-import { spawn, ChildProcess } from 'child_process';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { type ChildProcess, spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import inquirer from 'inquirer';
-import { ui } from '../utils/ui-helpers';
-import { readConfig, configExists } from '../utils/config';
+
 import type { SpringBootService } from '../types/config';
+import { readConfig, configExists } from '../utils/config';
+import { errorMessage } from '../utils/errors';
+import { ui } from '../utils/ui-helpers';
 
 export async function startSpringBootServices() {
   if (!configExists()) {
@@ -13,7 +16,7 @@ export async function startSpringBootServices() {
   }
 
   const config = readConfig();
-  if (!config || config.projectType !== 'spring-boot-microservice') {
+  if (config?.projectType !== 'spring-boot-microservice') {
     ui.error('This command is only available for Spring Boot microservice projects.');
     return;
   }
@@ -60,9 +63,11 @@ export async function startSpringBootServices() {
     });
 
     // Keep the process alive
-    await new Promise(() => {});
-  } catch (error: any) {
-    ui.error('Failed to start services:', error.message);
+    await new Promise(() => {
+      /* never resolves: keeps the process alive */
+    });
+  } catch (error) {
+    ui.error('Failed to start services:', errorMessage(error));
 
     // Clean up any running processes
     runningProcesses.forEach(({ service, process }) => {
@@ -93,7 +98,7 @@ async function startService(
     throw new Error(`Maven wrapper not found in ${servicePath}. Expected: ${mvnwFullPath}`);
   }
 
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const args = ['spring-boot:run'];
     const command = process.platform === 'win32' ? mvnwPath : mvnwPath;
 
@@ -134,7 +139,7 @@ async function startService(
     });
 
     // Handle process exit
-    childProcess.on('exit', (code, signal) => {
+    childProcess.on('exit', (code) => {
       if (code !== 0 && code !== null) {
         const error = `${service.name} exited with code ${code}`;
         ui.error(error);
@@ -146,7 +151,7 @@ async function startService(
 
     // Handle process errors
     childProcess.on('error', (error) => {
-      const errorMsg = `Failed to start ${service.name}: ${error.message}`;
+      const errorMsg = `Failed to start ${service.name}: ${errorMessage(error)}`;
       ui.error(errorMsg);
       if (!startupComplete) {
         reject(new Error(errorMsg));
@@ -173,7 +178,7 @@ export async function buildSpringBootServices(mode?: string) {
   }
 
   const config = readConfig();
-  if (!config || config.projectType !== 'spring-boot-microservice') {
+  if (config?.projectType !== 'spring-boot-microservice') {
     ui.error('This command is only available for Spring Boot microservice projects.');
     return;
   }
@@ -192,14 +197,14 @@ export async function buildSpringBootServices(mode?: string) {
   const absoluteBuildOutDir = join(process.cwd(), buildOutDir);
   if (!existsSync(absoluteBuildOutDir)) {
     ui.info(`Creating build output directory: ${absoluteBuildOutDir}`);
-    const fs = await import('fs');
+    const fs = await import('node:fs');
     fs.mkdirSync(absoluteBuildOutDir, { recursive: true });
   }
 
   ui.info('Building Spring Boot microservices...');
 
   const glob = (await import('fast-glob')).default;
-  const fs = await import('fs');
+  const fs = await import('node:fs');
 
   let servicesToBuild = config.springBoot.services;
 
@@ -249,8 +254,8 @@ export async function buildSpringBootServices(mode?: string) {
 async function buildService(
   service: SpringBootService,
   buildOutDir: string,
-  glob: any,
-  fs: any,
+  glob: (pattern: string, options: { cwd: string; absolute: boolean }) => Promise<string[]>,
+  fs: { copyFileSync: (src: string, dest: string) => void },
 ): Promise<void> {
   const servicePath = join(process.cwd(), service.path);
 
@@ -270,7 +275,7 @@ async function buildService(
     command = process.platform === 'win32' ? mvnwFullPath : `./${mvnwName}`;
   }
 
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const args = ['clean', 'install'];
 
     const childProcess = spawn(command, args, {
@@ -279,6 +284,7 @@ async function buildService(
       shell: true,
     });
 
+    // oxlint-disable-next-line typescript/no-misused-promises -- failures are routed through reject()
     childProcess.on('exit', async (code) => {
       if (code !== 0) {
         ui.error(`Build failed for ${service.name} with code ${code}`);
@@ -310,7 +316,7 @@ async function buildService(
     });
 
     childProcess.on('error', (err) => {
-      ui.error(`Failed to start build process for ${service.name}: ${err.message}`);
+      ui.error(`Failed to start build process for ${service.name}: ${errorMessage(err)}`);
       reject(err);
     });
   });

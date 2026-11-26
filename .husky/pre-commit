@@ -1,8 +1,31 @@
 #!/usr/bin/env sh
+# Fast checks only: runs on every commit and touches staged files only.
+# Slow checks (typecheck, full lint, build) live in .husky/pre-push.
 
-if git diff --cached --name-only | grep -E '^\.env($|\.)'; then
-  echo "❌ Refusing to commit .env files"
-  exit 1
+set -e
+
+fail() { echo "x $1"; exit 1; }
+
+echo "Pre-commit checks"
+
+# 1. Never commit env files
+if git diff --cached --name-only | grep -qE '(^|/)\.env($|\.)'; then
+  fail "Refusing to commit .env files"
 fi
 
-# npx lint-staged
+# 2. File paths must not end with a space
+INVALID=$(git diff --cached --name-only | grep -E ' $' || true)
+if [ -n "$INVALID" ]; then
+  echo "$INVALID"
+  fail "Invalid file path(s)"
+fi
+
+# 3. No leftover merge conflict markers in staged changes
+if git diff --cached -U0 | grep -qE '^\+(<<<<<<< |=======$|>>>>>>> )'; then
+  fail "Merge conflict markers found in staged changes"
+fi
+
+# 4. Lint and format staged files only (oxlint --fix, oxfmt via lint-staged)
+npx lint-staged
+
+echo "Pre-commit checks passed"

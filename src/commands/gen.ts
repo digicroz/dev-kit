@@ -1,5 +1,5 @@
-import { ui } from '../utils/ui-helpers.js';
 import { readConfig } from '../utils/config.js';
+import { ui } from '../utils/ui-helpers.js';
 import { generateImageIndex } from './assets.js';
 
 export const gen = async (): Promise<void> => {
@@ -33,7 +33,7 @@ export const gen = async (): Promise<void> => {
 
   ui.section('⚡ Running Generators', 'Generating all configured assets');
 
-  const tasks: Array<{ name: string; fn: () => Promise<void> }> = [];
+  const tasks: { name: string; fn: () => Promise<void> }[] = [];
 
   if (config.generators.assets.image) {
     tasks.push({

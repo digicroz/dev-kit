@@ -13,55 +13,55 @@ export type DKProjectType =
 
 export type DatabaseType = 'mysql' | 'postgres' | 'sqlite' | 'mongodb';
 
-export interface DatabaseConfig {
+export type DatabaseConfig = {
   dumpsDir?: string;
   migrationsDir?: string;
   dbUrlEnvName?: string;
   dbName?: string;
   dbType?: DatabaseType;
-}
+};
 
-export interface SpringBootService {
+export type SpringBootService = {
   name: string;
   path: string;
   startingOrderIndex: number;
-}
+};
 
-export interface SpringBootConfig {
+export type SpringBootConfig = {
   services: SpringBootService[];
   buildOutDir?: string;
-}
+};
 
-export interface AssetGeneratorConfig {
+export type AssetGeneratorConfig = {
   baseDir: string;
   nameCase?: 'kebab-case' | 'snake_case' | 'any';
   infoComment?: 'hidden' | 'short_info';
-}
+};
 
-export interface AssetsGeneratorConfig {
+export type AssetsGeneratorConfig = {
   baseDir: string;
   publicDir?: string;
   image?: AssetGeneratorConfig;
   svg?: AssetGeneratorConfig;
-}
+};
 
-export interface GeneratorsConfig {
+export type GeneratorsConfig = {
   assets?: AssetsGeneratorConfig;
-}
+};
 
-export interface AssetsTypeGeneratorConfig {
+export type AssetsTypeGeneratorConfig = {
   imagesDir: string;
   imageNameCase?: 'kebab-case' | 'snake_case' | 'any';
   infoComment?: 'hidden' | 'short_info';
-}
+};
 
-export interface DKConfig {
+export type DKConfig = {
   version: number;
   projectType: DKProjectType;
   database?: DatabaseConfig;
   springBoot?: SpringBootConfig;
   generators?: GeneratorsConfig;
   assetsTypeGenerator?: AssetsTypeGeneratorConfig;
-}
+};
 
 export const DK_CONFIG_LATEST_VERSION = 1;

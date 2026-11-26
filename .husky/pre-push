@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# Slow, whole-repo checks: same gate CI runs, so a push cannot fail CI on these.
+
+set -e
+
+echo "Pre-push checks"
+
+npm run check
+npm run build
+
+echo "Pre-push checks passed"
