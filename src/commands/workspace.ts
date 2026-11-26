@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- ponytail: inquirer answers and chalk lookups are untyped here; type them properly if this file grows. */
 // Workspace command implementation
 import inquirer from 'inquirer';
+import search from '@inquirer/search';
 import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync } from 'fs';
@@ -298,12 +300,20 @@ export async function workspace() {
     };
   });
 
-  const { selectedWorkspace } = await inquirer.prompt({
-    type: 'list',
-    name: 'selectedWorkspace',
-    message: chalk.bold('🎯 Select a workspace:'),
-    choices: workspaceChoices,
+  // Type to filter by workspace name, description or module name; empty input shows all.
+  const selectedWorkspace = await search({
+    message: chalk.bold('🎯 Select a workspace (type to search):'),
     pageSize: 15,
+    source: (term) => {
+      const q = term?.trim().toLowerCase();
+      if (!q) return workspaceChoices;
+      return workspaceChoices.filter((c, i) => {
+        const ws = config.workspaces[i];
+        return [ws.name, ws.description ?? '', ...ws.modules.map((m) => m.name)].some((s) =>
+          s.toLowerCase().includes(q),
+        );
+      });
+    },
   });
 
   const workspace = config.workspaces.find((ws) => ws.name === selectedWorkspace);
