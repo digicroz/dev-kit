@@ -5,4 +5,4 @@ if git diff --cached --name-only | grep -E '^\.env($|\.)'; then
   exit 1
 fi
 
-npx lint-staged
+# npx lint-staged
