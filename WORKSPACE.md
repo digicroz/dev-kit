@@ -52,6 +52,7 @@ dk ws scan C:/projects   # scans the folder + 2 levels down; defaults to current
 ```json
 {
   "workspace": "E-Commerce",
+  "order": -1,
   "name": "Frontend",
   "isIncludeByDefault": true,
   "actions": [{ "type": "open-in-vscode" }, { "type": "run-command", "command": "npm install" }]
@@ -59,6 +60,8 @@ dk ws scan C:/projects   # scans the folder + 2 levels down; defaults to current
 ```
 
 Only `workspace` is required. `name` defaults to the folder name, `actions` to `open-in-vscode`. The path is whatever location the scan found, so it works on every machine. Re-scanning updates existing modules (matched by path). Scan lists any `run-command`/`run-script` and asks for confirmation before saving.
+
+Optional `"order": <number>` sorts the **workspace** in the `dk ws` menu: lower comes first, default `0`, so `-1` floats a workspace up and `1` pushes it down. Set it in one repo's `ws.dk.json` per workspace (if several set it, the last scanned wins). Ties keep their existing order.
 
 ## 📝 Configuration Structure
 
@@ -70,6 +73,7 @@ Only `workspace` is required. `name` defaults to the folder name, `actions` to `
       "name": "My Project",
       "description": "Optional description",
       "color": "cyan",
+      "order": -1,
       "modules": [
         {
           "name": "Frontend",

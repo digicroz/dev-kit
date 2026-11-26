@@ -78,7 +78,7 @@ export function writeWorkspaceConfig(config: WorkspaceConfig): void {
 }
 
 // Validate workspace config structure
-export function validateWorkspaceConfig(config: any): boolean {
+export function validateWorkspaceConfig(config: Partial<WorkspaceConfig>): boolean {
   if (!config.version || !config.workspaces) {
     return false;
   }
@@ -134,6 +134,7 @@ export const REPO_CONFIG_FILE = 'ws.dk.json';
 export interface ScannedModule {
   workspace: string;
   module: WorkspaceModule;
+  order?: number;
 }
 
 // Look for ws.dk.json in dir and up to `depth` levels below it.
@@ -146,6 +147,7 @@ export function scanForRepoConfigs(dir: string, depth = 2): ScannedModule[] {
     if (!c.workspace) throw new Error(`${file}: "workspace" is required`);
     found.push({
       workspace: c.workspace,
+      order: typeof c.order === 'number' ? c.order : undefined,
       module: {
         name: c.name || basename(dir),
         path: dir,
@@ -167,9 +169,10 @@ export function scanForRepoConfigs(dir: string, depth = 2): ScannedModule[] {
 
 // Merge scanned modules into config: workspace by name, module by path (update in place).
 export function mergeScanned(config: WorkspaceConfig, found: ScannedModule[]): void {
-  for (const { workspace, module } of found) {
+  for (const { workspace, module, order } of found) {
     let ws = config.workspaces.find((w) => w.name === workspace);
     if (!ws) config.workspaces.push((ws = { name: workspace, modules: [] }));
+    if (order !== undefined) ws.order = order; // ponytail: last scanned module wins if several set it
     const i = ws.modules.findIndex((m) => m.path === module.path);
     if (i >= 0) ws.modules[i] = module;
     else ws.modules.push(module);
@@ -200,9 +203,7 @@ export function backfillScanDirs(): void {
 // Config used by `dk ws`: saved config + modules found via ws.dk.json under the repos root.
 // ponytail: rescans on every run (2 levels deep) and merges in memory only, nothing is written.
 export function loadWorkspaceConfig(): { config: WorkspaceConfig; warning?: string } {
-  const config = workspaceConfigExists()
-    ? readWorkspaceConfig()
-    : createDefaultConfig();
+  const config = workspaceConfigExists() ? readWorkspaceConfig() : createDefaultConfig();
   // Configs made before scanDirs existed fall back to the repos root.
   const dirs = config.scanDirs ?? [getReposRoot()].filter((d): d is string => !!d);
   const warnings: string[] = [];
@@ -210,9 +211,10 @@ export function loadWorkspaceConfig(): { config: WorkspaceConfig; warning?: stri
     if (!existsSync(dir)) continue;
     try {
       mergeScanned(config, scanForRepoConfigs(dir));
-    } catch (e: any) {
-      warnings.push(e.message);
+    } catch (e) {
+      warnings.push(e instanceof Error ? e.message : String(e));
     }
   }
+  config.workspaces.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); // stable: ties keep existing order
   return { config, warning: warnings.join('; ') || undefined };
 }

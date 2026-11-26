@@ -29,6 +29,7 @@ export interface Workspace {
   name: string;
   description?: string;
   color?: string; // Color for UI (cyan, green, yellow, etc.)
+  order?: number; // Lower first, default 0; set via "order" in any module's ws.dk.json
   modules: WorkspaceModule[];
 }
 
