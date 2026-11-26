@@ -7,6 +7,7 @@ import { resolve } from 'path';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { ui } from '../utils/ui-helpers.js';
+import { ensureCloneBaseDir } from './clone.js';
 import {
   getWorkspaceConfigPath,
   workspaceConfigExists,
@@ -17,6 +18,7 @@ import {
   scanForRepoConfigs,
   mergeScanned,
   loadWorkspaceConfig,
+  backfillScanDirs,
   getReposRoot,
   REPO_CONFIG_FILE,
 } from '../utils/workspace-config.js';
@@ -27,6 +29,10 @@ const execAsync = promisify(exec);
 // Initialize workspace configuration
 export async function workspaceInit() {
   console.log(chalk.cyan('\n🚀 Workspace Configuration Initialization\n'));
+
+  // Pick where 'digicroz-repos' lives; it becomes the default scan dir.
+  await ensureCloneBaseDir();
+  backfillScanDirs();
 
   const configExists = workspaceConfigExists();
 
@@ -100,6 +106,7 @@ export async function workspaceConfig() {
     return;
   }
 
+  backfillScanDirs(); // existing configs get the new scanDirs field
   const configPath = getWorkspaceConfigPath();
   const spinner = ora('Opening config in VS Code...').start();
 

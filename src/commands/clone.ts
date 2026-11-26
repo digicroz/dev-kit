@@ -27,6 +27,41 @@ function getRootDrives(): Promise<string[]> {
     );
   });
 }
+// Pick (once) the drive/folder that holds 'digicroz-repos'. Called by `dk ws init`.
+export async function ensureCloneBaseDir(): Promise<string> {
+  const config = readCloneConfig();
+  if (config && config.clones.length > 0) return config.clones[0].baseDir;
+  let baseDir: string;
+  const osType = os.platform() as osTypes;
+  if (osType === 'win32') {
+    const drives = await getRootDrives();
+    const { dirChoice } = await inquirer.prompt({
+      type: 'list',
+      name: 'dirChoice',
+      message: 'Choose a base directory option:',
+      choices: drives,
+    });
+    baseDir = dirChoice;
+  } else {
+    const { chosenDir } = await inquirer.prompt({
+      type: 'list',
+      name: 'chosenDir',
+      message: 'Choose a base directory:',
+      choices: [
+        { name: 'Root Directory (/root)', value: '/root' },
+        { name: 'Home Directory (~)', value: os.homedir() },
+      ],
+    });
+
+    baseDir = chosenDir;
+  }
+
+  //save config
+  const newConfig: CloneConfig = { version: '1.0.0', clones: [{ os: osType, baseDir }] };
+  writeCloneConfig(newConfig);
+  return baseDir;
+}
+
 async function formatTargetDir(repoUrl: string): Promise<string> {
   const parts = repoUrl.split('/');
   let repoName = parts[parts.length - 1];
@@ -38,45 +73,11 @@ async function formatTargetDir(repoUrl: string): Promise<string> {
   repoName = repoName.replace(/--/g, '/');
 
   const config = readCloneConfig();
-  let baseDir: string;
-  let osType: osTypes;
-
   if (!config || config.clones.length === 0) {
-    // Ask user
-
-    osType = os.platform() as osTypes;
-
-    if (osType === 'win32') {
-      const drives = await getRootDrives();
-      const { dirChoice } = await inquirer.prompt({
-        type: 'list',
-        name: 'dirChoice',
-        message: 'Choose a base directory option:',
-        choices: drives,
-      });
-      baseDir = dirChoice;
-    } else {
-      const { chosenDir } = await inquirer.prompt({
-        type: 'list',
-        name: 'chosenDir',
-        message: 'Choose a base directory:',
-        choices: [
-          { name: 'Root Directory (/root)', value: '/root' },
-          { name: 'Home Directory (~)', value: os.homedir() },
-        ],
-      });
-
-      baseDir = chosenDir;
-    }
-
-    //save config
-    const newConfig: CloneConfig = { version: '1.0.0', clones: [] };
-    newConfig.clones.push({ os: osType, baseDir });
-    writeCloneConfig(newConfig);
-  } else {
-    baseDir = config.clones[0].baseDir;
-    osType = config.clones[0].os;
+    ui.error('Clone directory not set up', "Run 'dk workspace init' first");
+    process.exit(1);
   }
+  const baseDir = config.clones[0].baseDir;
 
   return path.join(baseDir, 'digicroz-repos', repoName);
 }

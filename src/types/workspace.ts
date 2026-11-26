@@ -34,5 +34,7 @@ export interface Workspace {
 
 export interface WorkspaceConfig {
   version: string;
+  // Folders `dk ws` scans (2 levels deep) for ws.dk.json. Seeded with the digicroz repos dir.
+  scanDirs?: string[];
   workspaces: Workspace[];
 }

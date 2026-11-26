@@ -19,8 +19,10 @@ export function workspaceConfigExists(): boolean {
 
 // Create default workspace config
 function createDefaultConfig(): WorkspaceConfig {
+  const root = getReposRoot();
   return {
     version: '1.0.0',
+    scanDirs: root ? [root] : [],
     workspaces: [],
   };
 }
@@ -182,18 +184,35 @@ export function getReposRoot(): string | null {
   return join(/^[A-Za-z]:$/.test(base) ? base + '/' : base, 'digicroz-repos');
 }
 
+// Make sure scanDirs exists (default: repos root) and sits right after version, before workspaces.
+// Also re-orders configs that were already backfilled with scanDirs at the end.
+export function backfillScanDirs(): void {
+  if (!workspaceConfigExists()) return;
+  const config = readWorkspaceConfig();
+  const root = getReposRoot();
+  const scanDirs = config.scanDirs ?? (root ? [root] : undefined);
+  if (!scanDirs) return;
+  const { version, scanDirs: _old, ...rest } = config;
+  const ordered = { version, scanDirs, ...rest };
+  if (JSON.stringify(ordered) !== JSON.stringify(config)) writeWorkspaceConfig(ordered);
+}
+
 // Config used by `dk ws`: saved config + modules found via ws.dk.json under the repos root.
 // ponytail: rescans on every run (2 levels deep) and merges in memory only, nothing is written.
 export function loadWorkspaceConfig(): { config: WorkspaceConfig; warning?: string } {
   const config = workspaceConfigExists()
     ? readWorkspaceConfig()
-    : { version: '1.0.0', workspaces: [] };
-  const root = getReposRoot();
-  if (!root || !existsSync(root)) return { config };
-  try {
-    mergeScanned(config, scanForRepoConfigs(root));
-    return { config };
-  } catch (e: any) {
-    return { config, warning: e.message };
+    : createDefaultConfig();
+  // Configs made before scanDirs existed fall back to the repos root.
+  const dirs = config.scanDirs ?? [getReposRoot()].filter((d): d is string => !!d);
+  const warnings: string[] = [];
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    try {
+      mergeScanned(config, scanForRepoConfigs(dir));
+    } catch (e: any) {
+      warnings.push(e.message);
+    }
   }
+  return { config, warning: warnings.join('; ') || undefined };
 }
