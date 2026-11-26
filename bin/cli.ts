@@ -35,6 +35,7 @@ import {
   workspaceScan,
 } from '../src/commands/workspace.js';
 import { configExists, readConfig, isConfigOutdated } from '../src/utils/config.js';
+import { errorMessage } from '../src/utils/errors';
 import { ui } from '../src/utils/ui-helpers.js';
 import { checkDailyUpdate, getUpdateCommandSuggestion } from '../src/utils/version-check.js';
 // Get package.json version
@@ -103,21 +104,27 @@ function handleCancellation(commandName: string) {
 }
 
 // Check if error is user cancellation
-function isCancellationError(error: any): boolean {
-  return error.name === 'ExitPromptError' || error.message?.includes('SIGINT');
+function isCancellationError(error: unknown): boolean {
+  return (
+    (error instanceof Error && error.name === 'ExitPromptError') ||
+    errorMessage(error).includes('SIGINT')
+  );
 }
 
 // Enhanced command wrapper with loading animation
+// Method syntax keeps parameter bivariance so commands with narrower params (e.g. `(skip?: boolean)`) fit.
+type CommandAction = { run(...args: unknown[]): unknown }['run'];
+
 function createEnhancedCommand(
   name: string,
   description: string,
-  action: (...args: any[]) => unknown,
+  action: CommandAction,
   requiresProject = false,
 ) {
   return {
     name,
     description: chalk.gray(description),
-    async execute(...args: any[]) {
+    async execute(...args: unknown[]) {
       // Check if command requires project mode
       if (requiresProject && !configExists()) {
         showProjectModeRequired();
@@ -134,7 +141,7 @@ function createEnhancedCommand(
         spinner.stop();
         console.log(chalk.green('✓'), chalk.bold(`${name} ready`));
         await action(...args);
-      } catch (error: any) {
+      } catch (error) {
         spinner.stop();
 
         // Handle user cancellation gracefully
@@ -164,7 +171,9 @@ process.on('SIGINT', () => {
 
 process.on('uncaughtException', (error) => {
   console.log('\n');
-  console.log(createBox(chalk.red('💥 Error: ') + chalk.white(error.message), 'red', '#1a0000'));
+  console.log(
+    createBox(chalk.red('💥 Error: ') + chalk.white(errorMessage(error)), 'red', '#1a0000'),
+  );
   console.log(chalk.gray('If you need the latest DK version, run:'));
   console.log(chalk.cyan(`  ${getUpdateCommandSuggestion()}`));
   process.exit(1);
@@ -413,7 +422,7 @@ async function main() {
           console.log(chalk.red('✓'), chalk.bold('Deploying to Production'));
           await deployProd();
         }
-      } catch (error: any) {
+      } catch (error) {
         if (isCancellationError(error)) {
           handleCancellation('Deployment');
           return;
@@ -519,7 +528,7 @@ async function main() {
         } else if (buildType === 'android-debug-no-clean') {
           await buildAndroidDebug(true);
         }
-      } catch (error: any) {
+      } catch (error) {
         if (isCancellationError(error)) {
           handleCancellation('Build');
           return;
@@ -951,7 +960,7 @@ async function showInteractiveMenu(projectMode: boolean) {
       console.log(chalk.cyan(`\n▶ Running: dk ${selected.command}\n`));
       await executeCommand(selected.command, projectMode);
     }
-  } catch (error: any) {
+  } catch (error) {
     if (isCancellationError(error)) {
       console.log(gradientString('yellow', 'orange')('\n👋 Thanks for using DK! See you soon! ✨'));
       process.exit(0);

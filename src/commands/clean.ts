@@ -6,6 +6,7 @@ import fg from 'fast-glob';
 import inquirer from 'inquirer';
 import minimist from 'minimist';
 
+import { errorMessage } from '../utils/errors';
 // clean.ts
 import { ui } from '../utils/ui-helpers.js';
 
@@ -192,7 +193,7 @@ export const clean = async () => {
       spinner.fail('Failed to delete node_modules');
       ui.error(
         'Error deleting node_modules',
-        error instanceof Error ? error.message : 'Unknown error',
+        error instanceof Error ? errorMessage(error) : 'Unknown error',
       );
       process.exit(1);
     }
@@ -241,7 +242,7 @@ export const clean = async () => {
   spinner.stop();
 
   const toDelete = expanded
-    .map((e: any) => ({
+    .map((e) => ({
       path: e.path,
       isDir: e.type === 'directory',
       pattern: e.pattern,

@@ -16,6 +16,7 @@ import {
   detectProjectType,
   detectDatabaseConfig,
 } from '../utils/config';
+import { errorMessage } from '../utils/errors';
 import { ui } from '../utils/ui-helpers';
 
 const PROJECT_TYPES: { name: string; value: DKProjectType }[] = [
@@ -40,7 +41,7 @@ async function createInitialVSCodeSettings(generatorsConfig?: GeneratorsConfig):
     await fs.mkdir(vscodeDir, { recursive: true });
   }
 
-  let settings: any = {};
+  let settings: { 'files.readonlyInclude'?: Record<string, boolean>; [key: string]: unknown } = {};
 
   if (existsSync(settingsPath)) {
     try {
@@ -242,8 +243,8 @@ async function detectAndConfigureSpringBootServices(): Promise<SpringBootConfig 
     services.sort((a, b) => a.startingOrderIndex - b.startingOrderIndex);
 
     return { services };
-  } catch (error: any) {
-    ui.warning('Failed to detect Spring Boot services:', error?.message || String(error));
+  } catch (error) {
+    ui.warning('Failed to detect Spring Boot services:', errorMessage(error));
     return undefined;
   }
 }

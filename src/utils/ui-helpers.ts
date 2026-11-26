@@ -5,7 +5,7 @@ import path from 'node:path';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import * as gradientString from 'gradient-string';
-import ora, { type Ora } from 'ora';
+import ora, { type Options, type Ora } from 'ora';
 
 /**
  * Enhanced UI helpers with beautiful styling
@@ -69,10 +69,10 @@ export class UIHelper {
   /**
    * Create a beautiful progress spinner
    */
-  public createSpinner(text: string, spinnerType = 'dots12'): Ora {
+  public createSpinner(text: string, spinnerType: NonNullable<Options['spinner']> = 'dots12'): Ora {
     const spinner = ora({
       text: chalk.cyan(text),
-      spinner: spinnerType as any,
+      spinner: spinnerType,
       color: 'cyan',
     });
 

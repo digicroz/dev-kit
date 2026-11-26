@@ -7,6 +7,7 @@ import inquirer from 'inquirer';
 
 import type { CloneConfig, osTypes } from '../types/clone';
 import { getCloneConfigPath, readCloneConfig, writeCloneConfig } from '../utils/clone-config';
+import { errorMessage } from '../utils/errors';
 import { ui } from '../utils/ui-helpers';
 
 function getRootDrives(): Promise<string[]> {
@@ -123,7 +124,7 @@ export const clone = async (reposUrl?: string) => {
   } catch (error) {
     ui.error(
       'Failed to start development server',
-      error instanceof Error ? error.message : 'Unknown error',
+      error instanceof Error ? errorMessage(error) : 'Unknown error',
     );
     process.exit(1);
   }

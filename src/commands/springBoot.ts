@@ -6,6 +6,7 @@ import inquirer from 'inquirer';
 
 import type { SpringBootService } from '../types/config';
 import { readConfig, configExists } from '../utils/config';
+import { errorMessage } from '../utils/errors';
 import { ui } from '../utils/ui-helpers';
 
 export async function startSpringBootServices() {
@@ -65,8 +66,8 @@ export async function startSpringBootServices() {
     await new Promise(() => {
       /* never resolves: keeps the process alive */
     });
-  } catch (error: any) {
-    ui.error('Failed to start services:', error.message);
+  } catch (error) {
+    ui.error('Failed to start services:', errorMessage(error));
 
     // Clean up any running processes
     runningProcesses.forEach(({ service, process }) => {
@@ -150,7 +151,7 @@ async function startService(
 
     // Handle process errors
     childProcess.on('error', (error) => {
-      const errorMsg = `Failed to start ${service.name}: ${error.message}`;
+      const errorMsg = `Failed to start ${service.name}: ${errorMessage(error)}`;
       ui.error(errorMsg);
       if (!startupComplete) {
         reject(new Error(errorMsg));
@@ -253,8 +254,8 @@ export async function buildSpringBootServices(mode?: string) {
 async function buildService(
   service: SpringBootService,
   buildOutDir: string,
-  glob: any,
-  fs: any,
+  glob: (pattern: string, options: { cwd: string; absolute: boolean }) => Promise<string[]>,
+  fs: { copyFileSync: (src: string, dest: string) => void },
 ): Promise<void> {
   const servicePath = join(process.cwd(), service.path);
 
@@ -315,7 +316,7 @@ async function buildService(
     });
 
     childProcess.on('error', (err) => {
-      ui.error(`Failed to start build process for ${service.name}: ${err.message}`);
+      ui.error(`Failed to start build process for ${service.name}: ${errorMessage(err)}`);
       reject(err);
     });
   });

@@ -9,7 +9,7 @@ Migrated from ESLint + Prettier + tsup to oxlint (type-aware via oxlint-tsgolint
 | ------------------------- | ---------------------------------------------------- |
 | `build` / `dev`           | `tsdown` / `tsdown --watch` (`tsdown.config.ts`)     |
 | `lint`                    | `oxlint --fix`                                       |
-| `lint:check`              | `oxlint --max-warnings 199` (errors fail; see below) |
+| `lint:check`              | `oxlint --max-warnings 117` (errors fail; see below) |
 | `format` / `format:check` | `oxfmt` / `oxfmt --check`                            |
 | `typecheck`               | `tsc --noEmit`                                       |
 | `check`                   | lint:check + format:check + typecheck                |
@@ -30,10 +30,12 @@ comment), `no-useless-*`, `no-else-return`, `no-nested-ternary`, `no-param-reass
 `typescript/no-non-null-assertion`, `typescript/ban-ts-comment` (needs a description), floating and
 misused promises, and unnecessary conditions or assertions.
 
-**Warning ratchet.** The existing code has 199 warnings (mostly `no-explicit-any`,
+**Warning ratchet.** The existing code has 117 warnings (mostly
 `prefer-nullish-coalescing`, `no-unsafe-type-assertion`, `no-unnecessary-condition`). They are not
-fixed in this migration. `lint:check` uses `--max-warnings 199`, so new warnings fail CI. **When you
-fix some, lower the number in `package.json`.**
+fixed in this migration. `lint:check` uses `--max-warnings 117`, so new warnings fail CI. **When you
+fix some, lower the number in `package.json`.** `typescript/no-explicit-any` and
+`typescript/no-non-null-assertion` are already errors (0 occurrences); use `unknown` plus narrowing,
+and `errorMessage()` from `src/utils/errors.ts` for caught errors.
 
 ## Notes
 

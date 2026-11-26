@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 
 import { readConfig } from '../utils/config.js';
+import { errorMessage } from '../utils/errors';
 import { ui } from '../utils/ui-helpers.js';
 
 type GitConfigScope = 'local' | 'global' | 'both';
@@ -43,7 +44,7 @@ const runGitCommand = (
       resolve({
         success: false,
         output: '',
-        error: error.message,
+        error: errorMessage(error),
       });
     });
   });

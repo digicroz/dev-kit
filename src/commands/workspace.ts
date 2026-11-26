@@ -11,6 +11,7 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 
 import type { WorkspaceModule, WorkspaceAction } from '../types/workspace.js';
+import { errorMessage } from '../utils/errors';
 import { ui } from '../utils/ui-helpers.js';
 import {
   getWorkspaceConfigPath,
@@ -102,8 +103,8 @@ export async function workspaceInit() {
           'Workspace config imported successfully',
           `Location: ${getWorkspaceConfigPath()}`,
         );
-      } catch (error: any) {
-        ui.error('Failed to import config', error.message);
+      } catch (error) {
+        ui.error('Failed to import config', errorMessage(error));
       }
     } else {
       ui.info('Using existing workspace config', `Location: ${getWorkspaceConfigPath()}`);
@@ -128,9 +129,9 @@ export async function workspaceConfig() {
   try {
     await execAsync(`code "${configPath}"`);
     spinner.succeed('Config opened in VS Code');
-  } catch (error: any) {
+  } catch (error) {
     spinner.fail('Failed to open VS Code');
-    ui.error('Error', error.message);
+    ui.error('Error', errorMessage(error));
     ui.info('Config location', configPath);
   }
 }
@@ -147,8 +148,8 @@ async function executeAction(
       try {
         await execAsync(`code "${modulePath}"`);
         console.log(chalk.green(`  ✓ Opened ${moduleName} in VS Code`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open in VS Code: ${error.message}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Failed to open in VS Code: ${errorMessage(error)}`));
       }
       break;
 
@@ -160,8 +161,8 @@ async function executeAction(
           stdio: 'ignore',
         }).unref();
         console.log(chalk.green(`  ✓ Opened ${moduleName} in Zed`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open in Zed: ${error.message}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Failed to open in Zed: ${errorMessage(error)}`));
       }
       break;
 
@@ -170,8 +171,8 @@ async function executeAction(
       try {
         await execAsync(`antigravity "${modulePath}"`);
         console.log(chalk.green(`  ✓ Opened ${moduleName} in Antigravity`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open in Antigravity: ${error.message}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Failed to open in Antigravity: ${errorMessage(error)}`));
       }
       break;
 
@@ -192,8 +193,8 @@ async function executeAction(
           console.log(chalk.yellow(stderr));
         }
         console.log(chalk.green(`  ✓ Command completed`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Command failed: ${error.message}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Command failed: ${errorMessage(error)}`));
       }
       break;
 
@@ -220,8 +221,8 @@ async function executeAction(
           console.log(chalk.yellow(stderr));
         }
         console.log(chalk.green(`  ✓ Script completed`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Script failed: ${error.message}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Script failed: ${errorMessage(error)}`));
       }
       break;
 
@@ -236,8 +237,8 @@ async function executeAction(
 
         await execAsync(openCmd);
         console.log(chalk.green(`  ✓ URL opened`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open URL: ${error.message}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Failed to open URL: ${errorMessage(error)}`));
       }
       break;
 
@@ -248,8 +249,8 @@ async function executeAction(
 
         await execAsync(openCmd);
         console.log(chalk.green(`  ✓ Folder opened`));
-      } catch (error: any) {
-        console.log(chalk.red(`  ✗ Failed to open folder: ${error.message}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Failed to open folder: ${errorMessage(error)}`));
       }
       break;
 
@@ -409,8 +410,8 @@ export async function workspaceScan(dir?: string) {
   let found;
   try {
     found = scanForRepoConfigs(root);
-  } catch (error: any) {
-    return ui.error('Scan failed', error.message);
+  } catch (error) {
+    return ui.error('Scan failed', errorMessage(error));
   }
   if (found.length === 0) {
     return ui.warning(`No ${REPO_CONFIG_FILE} found under ${root}`);

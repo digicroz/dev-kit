@@ -8,6 +8,7 @@ import gradientString from 'gradient-string';
 import ora from 'ora';
 
 import { readConfig } from '../utils/config.js';
+import { errorMessage } from '../utils/errors';
 
 // Helper function to get app name from app.json
 function getAppName(): string {
@@ -515,12 +516,12 @@ export async function buildAndroidRelease(skipClean = false, buildType = 'releas
     try {
       execSync('npx expo prebuild', { stdio: 'pipe', cwd: process.cwd() });
       prebuildSpinner.succeed(chalk.green('✓ Expo prebuild completed'));
-    } catch (error: any) {
+    } catch (error) {
       prebuildSpinner.fail(chalk.red('✗ Expo prebuild failed'));
       console.log(
         boxen(
           `${chalk.red('💥 Prebuild Failed')}\n${chalk.white(
-            error.message || 'Unknown error occurred',
+            errorMessage(error) || 'Unknown error occurred',
           )}`,
           {
             padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -596,14 +597,14 @@ export async function buildAndroidRelease(skipClean = false, buildType = 'releas
 
       try {
         await runGradleCleanWithProgress();
-      } catch (error: any) {
+      } catch (error) {
         // If clean fails completely, show help and continue
         console.log(
           chalk.gray('Note: Clean process encountered issues, but continuing with build...'),
         );
 
         // Check if it's the specific Windows file lock error
-        if (error.message?.includes('Unable to delete directory')) {
+        if (errorMessage(error)?.includes('Unable to delete directory')) {
           await handleWindowsFileLocks();
         }
       }
@@ -699,11 +700,11 @@ export async function buildAndroidRelease(skipClean = false, buildType = 'releas
     } else {
       copySpinner.warn(chalk.yellow('⚠ Could not copy APK to builds folder'));
     }
-  } catch (error: any) {
+  } catch (error) {
     console.log(
       boxen(
         `${chalk.red('💥 Build Failed')}\n${chalk.white(
-          error.message || 'Unknown error occurred',
+          errorMessage(error) || 'Unknown error occurred',
         )}`,
         {
           padding: { top: 0, bottom: 0, left: 1, right: 1 },
